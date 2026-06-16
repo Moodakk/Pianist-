@@ -1,0 +1,9 @@
+{
+  "name": "Anime Piano Trainer",
+  "short_name": "AnimePiano",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08080d",
+  "theme_color": "#7c3aed",
+  "description": "MVP web app for learning piano with user-imported MIDI files and anime-focused library placeholders."
+}
