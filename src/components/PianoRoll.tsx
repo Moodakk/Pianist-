@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { MidiNote } from '../types/midi'
 import { isBlackKey } from '../utils/midiHelpers'
 
@@ -5,31 +6,85 @@ interface Props {
   notes: MidiNote[]
   currentTime: number
   hitSet?: Set<number>
+  missedSet?: Set<number>
+  min?: number
+  max?: number
+  height?: number
+  pxPerSec?: number
 }
 
-const HIT_LINE = 280
+const DEFAULT_MIN = 36
+const DEFAULT_MAX = 96
 
-export function PianoRoll({ notes, currentTime, hitSet }: Props) {
+export function PianoRoll({
+  notes,
+  currentTime,
+  hitSet,
+  missedSet,
+  min = DEFAULT_MIN,
+  max = DEFAULT_MAX,
+  height = 460,
+  pxPerSec = 220,
+}: Props) {
+  const whiteCount = useMemo(() => {
+    let c = 0
+    for (let m = min; m <= max; m++) if (!isBlackKey(m)) c++
+    return c
+  }, [min, max])
+
+  const whiteIndexFor = (midi: number) => {
+    let idx = 0
+    for (let m = min; m < midi; m++) if (!isBlackKey(m)) idx++
+    return idx
+  }
+
+  const whiteWidthPct = 100 / whiteCount
+  const hitLine = height - 24
+
   return (
-    <div className="relative h-80 overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
-      <div className="absolute inset-x-0 z-10 border-t-2 border-cyan-400" style={{ top: HIT_LINE }} />
+    <div className="roll" style={{ height }}>
+      <div className="grid-bg" />
+      <div className="hit-line" style={{ top: hitLine }} />
       {notes.map((note, index) => {
-        const y = (note.start - currentTime) * 120 + HIT_LINE
-        const h = Math.max(8, note.duration * 120)
-        if (y < -60 || y > 360) return null
+        if (note.midi < min || note.midi > max) return null
+        const distance = (note.start - currentTime) * pxPerSec
+        const y = hitLine - distance - Math.max(10, note.duration * pxPerSec)
+        const h = Math.max(10, note.duration * pxPerSec)
+        if (y > height + 20 || y + h < -20) return null
+
+        const isBlack = isBlackKey(note.midi)
+        let left: number
+        let width: number
+        if (isBlack) {
+          const whiteIdx = whiteIndexFor(note.midi)
+          left = whiteIdx * whiteWidthPct - whiteWidthPct * 0.3
+          width = whiteWidthPct * 0.6
+        } else {
+          left = whiteIndexFor(note.midi) * whiteWidthPct + whiteWidthPct * 0.08
+          width = whiteWidthPct * 0.84
+        }
+
+        const isHit = hitSet?.has(index)
+        const isMissed = missedSet?.has(index)
+        const isLeftHand = note.track % 2 === 1
+        const className = `roll-note ${isHit ? 'hit' : isMissed ? 'missed' : isLeftHand ? 'lh' : ''}`
+
         return (
           <div
             key={`${note.track}-${index}-${note.start}`}
-            className={`absolute rounded ${hitSet?.has(index) ? 'bg-emerald-400' : note.track % 2 === 0 ? 'bg-violet-500' : 'bg-fuchsia-500'} ${isBlackKey(note.midi) ? 'opacity-85' : ''}`}
-            style={{
-              left: `${((note.midi - 36) / 60) * 100}%`,
-              width: '1.4%',
-              top: y,
-              height: h,
-            }}
+            className={className}
+            style={{ left: `${left}%`, width: `${width}%`, top: y, height: h }}
           />
         )
       })}
+      {notes.length === 0 ? (
+        <div className="absolute inset-0 grid place-items-center text-center text-sm text-[color:var(--text-2)]">
+          <div>
+            <p className="text-base font-medium text-[color:var(--text-1)]">No notes loaded</p>
+            <p className="mt-1">Import a MIDI file to see the falling notes here.</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

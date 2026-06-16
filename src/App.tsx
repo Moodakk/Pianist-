@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { Dashboard } from './pages/Dashboard'
 import { ImportMidi } from './pages/ImportMidi'
 import { Library } from './pages/Library'
@@ -8,47 +8,87 @@ import { Progress } from './pages/Progress'
 import { Settings } from './pages/Settings'
 import { useLocalLibrary } from './hooks/useLocalLibrary'
 import type { Song } from './types/song'
+import { Icon, type IconName } from './components/Icon'
 
-const nav = [
-  { to: '/', label: 'Home / Dashboard' },
-  { to: '/library', label: 'Song Library' },
-  { to: '/import', label: 'Import MIDI' },
-  { to: '/practice', label: 'Practice Player' },
-  { to: '/progress', label: 'Progress' },
-  { to: '/settings', label: 'Settings' },
+const nav: { to: string; label: string; icon: IconName }[] = [
+  { to: '/', label: 'Home', icon: 'home' },
+  { to: '/library', label: 'Library', icon: 'library' },
+  { to: '/import', label: 'Import', icon: 'upload' },
+  { to: '/practice', label: 'Practice', icon: 'piano' },
+  { to: '/progress', label: 'Progress', icon: 'progress' },
+  { to: '/settings', label: 'Settings', icon: 'settings' },
 ]
 
 export default function App() {
   const library = useLocalLibrary()
   const [practiceSong, setPracticeSong] = useState<Song | null>(library.importedSongs[0] ?? null)
+  const location = useLocation()
+  const isPractice = location.pathname.startsWith('/practice')
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-100">
-      <div className="mx-auto flex max-w-[1400px] flex-col gap-4 p-4 lg:flex-row">
-        <aside className="w-full rounded-2xl border border-violet-800/40 bg-slate-900/60 p-4 lg:w-64 lg:self-start lg:sticky lg:top-4">
-          <h2 className="mb-4 text-lg font-bold text-violet-300">Anime Piano Trainer</h2>
-          <nav className="space-y-2">
-            {nav.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) => `block rounded px-3 py-2 text-sm ${isActive ? 'bg-violet-700/50 text-violet-100' : 'text-slate-300 hover:bg-slate-800'}`}
-              >
-                {item.label}
-              </NavLink>
-            ))}
-          </nav>
-        </aside>
+    <div className="app-shell">
+      <aside className="nav-rail">
+        <div className="logo" title="Easy Piano">
+          <Icon name="piano" size={22} />
+        </div>
+        {nav.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.to === '/'}
+            className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+            title={item.label}
+          >
+            <Icon name={item.icon} size={22} />
+            <span className="nav-label">{item.label}</span>
+          </NavLink>
+        ))}
+      </aside>
 
-        <main className="min-w-0 flex-1 space-y-4 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="title-bar">
+          <span className="dot red" />
+          <span className="dot yellow" />
+          <span className="dot green" />
+          <span className="ml-3 text-xs text-[color:var(--text-2)]">Easy Piano — Desktop</span>
+          <span className="ml-auto text-xs text-[color:var(--text-2)]">v0.1 · MVP</span>
+        </div>
+
+        {!isPractice && (
+          <div className="top-bar">
+            <h1 className="text-lg font-semibold">
+              {nav.find((n) => (n.to === '/' ? location.pathname === '/' : location.pathname.startsWith(n.to)))?.label ?? 'Home'}
+            </h1>
+            <div className="search-box ml-6">
+              <Icon name="search" size={16} />
+              <input placeholder="Search songs, anime, openings…" />
+            </div>
+            <div className="ml-auto flex items-center gap-3">
+              <span className="chip violet">
+                <Icon name="sparkles" size={12} /> MVP
+              </span>
+              <span className="chip">
+                {library.songs.length} songs
+              </span>
+            </div>
+          </div>
+        )}
+
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <Routes>
-            <Route path="/" element={<Dashboard songs={library.songs} />} />
-            <Route path="/library" element={<Library songs={library.songs} onFavorite={library.toggleFavorite} onSetPracticeSong={setPracticeSong} />} />
-            <Route path="/import" element={<ImportMidi onSave={(song) => {
-              library.upsertImportedSong(song)
-              setPracticeSong(song)
-            }} />} />
-            <Route path="/practice" element={<Practice song={practiceSong} onSessionComplete={library.addSession} />} />
+            <Route path="/" element={<Dashboard songs={library.songs} onPlay={(song) => { setPracticeSong(song) }} />} />
+            <Route
+              path="/library"
+              element={<Library songs={library.songs} onFavorite={library.toggleFavorite} onSetPracticeSong={setPracticeSong} />}
+            />
+            <Route
+              path="/import"
+              element={<ImportMidi onSave={(song) => { library.upsertImportedSong(song); setPracticeSong(song) }} />}
+            />
+            <Route
+              path="/practice"
+              element={<Practice song={practiceSong} onSessionComplete={library.addSession} />}
+            />
             <Route path="/progress" element={<Progress songs={library.songs} sessions={library.sessions} />} />
             <Route path="/settings" element={<Settings settings={library.settings} onChange={library.setSettings} onReset={library.resetAllData} />} />
           </Routes>

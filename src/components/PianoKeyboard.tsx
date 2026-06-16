@@ -1,27 +1,78 @@
-import { isBlackKey } from '../utils/midiHelpers'
+import { useMemo } from 'react'
+import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
 interface Props {
   activeNotes: number[]
+  leftHandNotes?: number[]
   onPress?: (midi: number, on: boolean) => void
   min?: number
   max?: number
+  showLabels?: boolean
 }
 
-export function PianoKeyboard({ activeNotes, onPress, min = 48, max = 84 }: Props) {
-  const notes = Array.from({ length: max - min + 1 }, (_, i) => min + i)
+const DEFAULT_MIN = 36
+const DEFAULT_MAX = 96
+
+export function PianoKeyboard({
+  activeNotes,
+  leftHandNotes = [],
+  onPress,
+  min = DEFAULT_MIN,
+  max = DEFAULT_MAX,
+  showLabels = true,
+}: Props) {
+  const { whiteKeys, blackKeys } = useMemo(() => {
+    const whites: number[] = []
+    const blacks: number[] = []
+    for (let m = min; m <= max; m++) {
+      if (isBlackKey(m)) blacks.push(m)
+      else whites.push(m)
+    }
+    return { whiteKeys: whites, blackKeys: blacks }
+  }, [min, max])
+
+  const whiteIndexFor = (midi: number) => {
+    let idx = 0
+    for (let m = min; m < midi; m++) if (!isBlackKey(m)) idx++
+    return idx
+  }
+
+  const whiteWidthPct = 100 / whiteKeys.length
+
+  const isLeftHand = (m: number) => leftHandNotes.includes(m)
+  const isActive = (m: number) => activeNotes.includes(m) || leftHandNotes.includes(m)
 
   return (
-    <div className="relative h-28 w-full overflow-x-auto rounded-lg border border-slate-700 bg-slate-950 p-1">
-      <div className="relative flex h-full min-w-max">
-        {notes.map((midi) => {
-          const active = activeNotes.includes(midi)
-          const black = isBlackKey(midi)
+    <div className="piano">
+      <div className="white-row">
+        {whiteKeys.map((midi) => (
+          <button
+            key={midi}
+            onMouseDown={() => onPress?.(midi, true)}
+            onMouseUp={() => onPress?.(midi, false)}
+            onMouseLeave={() => onPress?.(midi, false)}
+            className={`key-white ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
+            aria-label={midiToName(midi)}
+          >
+            {showLabels && midi % 12 === 0 ? (
+              <span className="key-label">{midiToName(midi)}</span>
+            ) : null}
+          </button>
+        ))}
+      </div>
+      <div className="black-row">
+        {blackKeys.map((midi) => {
+          const whiteIdx = whiteIndexFor(midi)
+          const left = whiteIdx * whiteWidthPct
           return (
             <button
               key={midi}
               onMouseDown={() => onPress?.(midi, true)}
               onMouseUp={() => onPress?.(midi, false)}
-              className={`relative h-full w-6 border ${black ? 'mt-0 h-16 bg-slate-800' : 'bg-white'} ${active ? 'ring-2 ring-cyan-400' : ''}`}
+              onMouseLeave={() => onPress?.(midi, false)}
+              className={`key-black ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
+              style={{ left: `${left}%`, width: `${whiteWidthPct * 0.6}%` }}
+              aria-label={midiToName(midi)}
             />
           )
         })}
