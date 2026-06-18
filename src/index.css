@@ -472,6 +472,18 @@ button {
   border-bottom: 1px solid rgba(255,255,255,0.05);
   background: var(--bg-1);
 }
+.practice-header .numeric-block {
+  font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  min-width: 90px;
+}
+.practice-header .hit-block {
+  font-variant-numeric: tabular-nums;
+  min-width: 110px;
+}
+.practice-header .hit-block span:not(:first-child) {
+  font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+}
 
 /* Progress bar */
 .progress-bar {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 const DEFAULT_MIN = 36
 const DEFAULT_MAX = 96
 
-export function PianoKeyboard({
+function PianoKeyboardImpl({
   activeNotes,
   leftHandNotes = [],
   onPress,
@@ -107,3 +107,21 @@ export function PianoKeyboard({
     </div>
   )
 }
+
+function arraysEqual(a: number[], b: number[]) {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
+}
+
+export const PianoKeyboard = memo(PianoKeyboardImpl, (prev, next) => {
+  return (
+    arraysEqual(prev.activeNotes, next.activeNotes) &&
+    arraysEqual(prev.leftHandNotes ?? [], next.leftHandNotes ?? []) &&
+    prev.onPress === next.onPress &&
+    prev.min === next.min &&
+    prev.max === next.max &&
+    prev.showLabels === next.showLabels
+  )
+})

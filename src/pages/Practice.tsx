@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MidiDeviceSelector } from '../components/MidiDeviceSelector'
 import { PianoKeyboard } from '../components/PianoKeyboard'
@@ -42,8 +42,22 @@ export function Practice({ song, onSessionComplete }: Props) {
     engine.registerHit(midi)
   })
 
-  const leftHandActive = midiInput.activeNotes.filter((m) =>
-    engine.filteredNotes.some((n) => n.midi === m && n.track % 2 === 1),
+  const leftHandActive = useMemo(
+    () =>
+      midiInput.activeNotes.filter((m) =>
+        engine.filteredNotes.some((n) => n.midi === m && n.track % 2 === 1),
+      ),
+    [midiInput.activeNotes, engine.filteredNotes],
+  )
+
+  const currentTimeRef = useRef(engine.currentTime)
+  useEffect(() => { currentTimeRef.current = engine.currentTime })
+
+  const onKeyboardPress = useCallback(
+    (midi: number, on: boolean) => {
+      if (on) scoring.onNoteInput(midi, currentTimeRef.current)
+    },
+    [scoring],
   )
 
   const handlePlay = () => {
@@ -130,21 +144,17 @@ export function Practice({ song, onSessionComplete }: Props) {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-4">
-          <div className="text-right font-mono">
+          <div className="numeric-block text-right">
             <div className="text-base text-[color:var(--text-0)]">{formatTime(engine.currentTime)}</div>
             <div className="text-[10px] uppercase tracking-wider text-[color:var(--text-2)]">
               of {formatTime(totalDuration)}
             </div>
           </div>
-          <div className="hidden text-right text-xs text-[color:var(--text-2)] md:block">
-            <div>
-              Hit{' '}
-              <span className="font-mono text-sm text-emerald-300">{scoring.hitSet.size}</span>
-              {' / '}
-              <span className="font-mono text-sm text-[color:var(--text-1)]">
-                {engine.filteredNotes.length}
-              </span>
-            </div>
+          <div className="hit-block hidden text-right text-xs text-[color:var(--text-2)] md:block">
+            <span>Hit </span>
+            <span className="text-sm text-emerald-300">{scoring.hitSet.size}</span>
+            <span> / </span>
+            <span className="text-sm text-[color:var(--text-1)]">{engine.filteredNotes.length}</span>
           </div>
         </div>
       </div>
@@ -204,7 +214,7 @@ export function Practice({ song, onSessionComplete }: Props) {
       <PianoKeyboard
         activeNotes={midiInput.activeNotes}
         leftHandNotes={leftHandActive}
-        onPress={(midi, on) => on && scoring.onNoteInput(midi, engine.currentTime)}
+        onPress={onKeyboardPress}
       />
 
       {showSummary ? (
