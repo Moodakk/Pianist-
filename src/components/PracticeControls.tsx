@@ -8,13 +8,15 @@ interface Props {
   metronomeOn: boolean
   countIn: number
   running: boolean
+  canResume: boolean
   onMode: (v: PracticeMode) => void
   onHandMode: (v: HandMode) => void
   onSpeed: (v: number) => void
   onMetronome: (v: boolean) => void
   onCountIn: (v: number) => void
-  onStart: () => void
-  onStop: () => void
+  onPlay: () => void
+  onPause: () => void
+  onRestart: () => void
 }
 
 const speeds = [0.25, 0.5, 0.75, 1]
@@ -33,11 +35,21 @@ export function PracticeControls(props: Props) {
   return (
     <div className="panel flex flex-wrap items-center gap-3 px-4 py-3">
       <button
-        className={`btn ${props.running ? 'btn-danger' : 'btn-primary'}`}
-        onClick={props.running ? props.onStop : props.onStart}
+        className={`btn ${props.running ? 'btn-warning' : 'btn-primary'} !px-4`}
+        onClick={props.running ? props.onPause : props.onPlay}
+        aria-label={props.running ? 'Pause' : props.canResume ? 'Resume' : 'Play'}
       >
-        <Icon name={props.running ? 'stop' : 'play'} size={16} />
-        {props.running ? 'Stop' : 'Start'}
+        <Icon name={props.running ? 'pause' : 'play'} size={18} />
+        {props.running ? 'Pause' : props.canResume ? 'Resume' : 'Play'}
+      </button>
+
+      <button
+        className="btn btn-ghost !px-3"
+        onClick={props.onRestart}
+        aria-label="Restart"
+        title="Restart from beginning"
+      >
+        <Icon name="stop" size={14} />
       </button>
 
       <div className="mx-1 h-8 w-px bg-white/10" />
@@ -80,7 +92,7 @@ export function PracticeControls(props: Props) {
         </label>
 
         <button
-          className="flex items-center gap-2 text-xs text-[color:var(--text-1)]"
+          className="flex items-center gap-2 text-xs text-[color:var(--text-1)] transition hover:text-white"
           onClick={() => props.onMetronome(!props.metronomeOn)}
         >
           <Icon name="metronome" size={14} />
@@ -107,7 +119,7 @@ function ControlGroup({
         <Icon name={icon} size={12} />
         {label}
       </span>
-      <div className="flex overflow-hidden rounded-lg border border-white/5 bg-white/[0.02]">{children}</div>
+      <div className="seg-group">{children}</div>
     </div>
   )
 }
@@ -122,12 +134,7 @@ function SegBtn({
   children: React.ReactNode
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1.5 text-xs font-medium transition ${
-        active ? 'bg-violet-500/30 text-white' : 'text-[color:var(--text-1)] hover:bg-white/5'
-      }`}
-    >
+    <button onClick={onClick} className={`seg-btn ${active ? 'active' : ''}`}>
       {children}
     </button>
   )

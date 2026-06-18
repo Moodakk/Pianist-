@@ -387,3 +387,158 @@ button {
   100% { box-shadow: 0 0 0 0 rgba(124,92,255,0); }
 }
 .pulse { animation: pulse-ring 1.4s infinite; }
+
+/* Btn variants */
+.btn-warning {
+  background: linear-gradient(145deg, #f59e0b, #d97706);
+  color: white;
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.35);
+}
+.btn-warning:hover { transform: translateY(-1px); box-shadow: 0 10px 30px rgba(245, 158, 11, 0.5); }
+
+/* Segmented control */
+.seg-group {
+  display: inline-flex;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 1px;
+}
+.seg-btn {
+  padding: 6px 11px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-1);
+  background: transparent;
+  border: 0;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+.seg-btn:hover { color: var(--text-0); background: rgba(255,255,255,0.04); }
+.seg-btn.active {
+  background: linear-gradient(145deg, rgba(124,92,255,0.55), rgba(94,62,255,0.65));
+  color: white;
+  box-shadow: 0 2px 8px rgba(124, 92, 255, 0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+/* Practice header */
+.practice-header {
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  background: linear-gradient(180deg, rgba(15,16,28,0.7), rgba(15,16,28,0.3));
+  backdrop-filter: blur(10px);
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 3px;
+  background: rgba(255,255,255,0.05);
+  position: relative;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent), var(--accent-3));
+  box-shadow: 0 0 12px rgba(124,92,255,0.6);
+  transition: width 0.1s linear;
+  border-radius: 0 4px 4px 0;
+}
+
+/* Hit glow under the hit line */
+.roll .hit-glow {
+  position: absolute; left: 0; right: 0; height: 30px;
+  background: linear-gradient(180deg, rgba(124,92,255,0.18), transparent);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* Count-in overlay */
+.countdown-overlay {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  background: rgba(8,9,16,0.6);
+  backdrop-filter: blur(6px);
+  z-index: 20;
+  pointer-events: none;
+  border-radius: 14px;
+}
+.countdown-number {
+  font-size: 160px;
+  font-weight: 900;
+  color: white;
+  text-shadow: 0 0 40px rgba(124,92,255,0.8), 0 0 80px rgba(124,92,255,0.4);
+  animation: countdown-pop .5s ease-out;
+}
+@keyframes countdown-pop {
+  from { transform: scale(1.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Play prompt overlay */
+.play-prompt {
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  pointer-events: none;
+  z-index: 15;
+}
+.play-prompt-card {
+  display: flex; flex-direction: column; align-items: center;
+  padding: 28px 36px;
+  background: rgba(20,22,38,0.7);
+  border: 1px solid rgba(124,92,255,0.3);
+  border-radius: 20px;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,92,255,0.1);
+  animation: float 3s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Pop animation for modals */
+@keyframes pop-in {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.animate-pop { animation: pop-in .25s ease-out; }
+
+/* Improved nav active indicator animation */
+.nav-item { transition: all .25s cubic-bezier(0.4, 0, 0.2, 1); }
+.nav-item.active::before {
+  animation: nav-stretch .3s ease-out;
+}
+@keyframes nav-stretch {
+  from { transform: scaleY(0.3); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+/* Tile fade-in on render */
+@keyframes tile-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.tile { animation: tile-rise .35s ease-out backwards; }
+.tile:nth-child(1) { animation-delay: 0.0s; }
+.tile:nth-child(2) { animation-delay: 0.04s; }
+.tile:nth-child(3) { animation-delay: 0.08s; }
+.tile:nth-child(4) { animation-delay: 0.12s; }
+.tile:nth-child(5) { animation-delay: 0.16s; }
+.tile:nth-child(6) { animation-delay: 0.20s; }
+.tile:nth-child(7) { animation-delay: 0.24s; }
+.tile:nth-child(8) { animation-delay: 0.28s; }
+
+/* Keyboard press depth */
+.piano .key-white { transition: background .08s, transform .06s, box-shadow .06s; }
+.piano .key-white.active { transform: translateY(2px); }
+.piano .key-black { transition: background .08s, transform .06s, box-shadow .06s; }
+.piano .key-black.active { transform: translateX(-50%) translateY(2px); }
+
+/* Roll layer GPU hint */
+.roll-layer { backface-visibility: hidden; }
+
+/* Disabled scrolling glitch fix */
+.roll { contain: layout paint; }

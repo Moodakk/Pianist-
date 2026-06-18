@@ -16,6 +16,18 @@ interface Props {
 const DEFAULT_MIN = 36
 const DEFAULT_MAX = 96
 
+interface PositionedNote {
+  index: number
+  midi: number
+  track: number
+  top: number
+  h: number
+  left: number
+  width: number
+  isBlack: boolean
+  isLeftHand: boolean
+}
+
 export function PianoRoll({
   notes,
   currentTime,
@@ -32,51 +44,95 @@ export function PianoRoll({
     return c
   }, [min, max])
 
-  const whiteIndexFor = (midi: number) => {
+  const whiteIndexFor = useMemo(() => {
+    const lookup = new Map<number, number>()
     let idx = 0
-    for (let m = min; m < midi; m++) if (!isBlackKey(m)) idx++
-    return idx
-  }
+    for (let m = min; m <= max; m++) {
+      if (!isBlackKey(m)) {
+        lookup.set(m, idx)
+        idx++
+      } else {
+        lookup.set(m, idx - 0.5)
+      }
+    }
+    return (midi: number) => lookup.get(midi) ?? 0
+  }, [min, max])
 
   const whiteWidthPct = 100 / whiteCount
   const hitLine = height - 24
+
+  // Pre-compute static positions (don't depend on currentTime — only on note + dimensions)
+  const positioned = useMemo<PositionedNote[]>(() => {
+    return notes
+      .filter((note) => note.midi >= min && note.midi <= max)
+      .map((note, originalIndex) => {
+        const isBlack = isBlackKey(note.midi)
+        const h = Math.max(10, note.duration * pxPerSec)
+        // Static top: where the note WOULD be at currentTime = 0
+        const top = hitLine - note.start * pxPerSec - h
+
+        let left: number
+        let width: number
+        const whiteIdx = whiteIndexFor(note.midi)
+        if (isBlack) {
+          left = whiteIdx * whiteWidthPct + whiteWidthPct * 0.5 - whiteWidthPct * 0.3
+          width = whiteWidthPct * 0.6
+        } else {
+          left = whiteIdx * whiteWidthPct + whiteWidthPct * 0.08
+          width = whiteWidthPct * 0.84
+        }
+
+        return {
+          index: originalIndex,
+          midi: note.midi,
+          track: note.track,
+          top,
+          h,
+          left,
+          width,
+          isBlack,
+          isLeftHand: note.track % 2 === 1,
+        }
+      })
+  }, [notes, hitLine, pxPerSec, whiteWidthPct, whiteIndexFor, min, max])
+
+  // The notes layer translates downward as currentTime increases.
+  const layerTransform = `translate3d(0, ${currentTime * pxPerSec}px, 0)`
 
   return (
     <div className="roll" style={{ height }}>
       <div className="grid-bg" />
       <div className="hit-line" style={{ top: hitLine }} />
-      {notes.map((note, index) => {
-        if (note.midi < min || note.midi > max) return null
-        const distance = (note.start - currentTime) * pxPerSec
-        const y = hitLine - distance - Math.max(10, note.duration * pxPerSec)
-        const h = Math.max(10, note.duration * pxPerSec)
-        if (y > height + 20 || y + h < -20) return null
+      <div className="hit-glow" style={{ top: hitLine - 2 }} />
 
-        const isBlack = isBlackKey(note.midi)
-        let left: number
-        let width: number
-        if (isBlack) {
-          const whiteIdx = whiteIndexFor(note.midi)
-          left = whiteIdx * whiteWidthPct - whiteWidthPct * 0.3
-          width = whiteWidthPct * 0.6
-        } else {
-          left = whiteIndexFor(note.midi) * whiteWidthPct + whiteWidthPct * 0.08
-          width = whiteWidthPct * 0.84
-        }
+      <div
+        className="roll-layer"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          transform: layerTransform,
+          willChange: 'transform',
+        }}
+      >
+        {positioned.map((n) => {
+          const isHit = hitSet?.has(n.index)
+          const isMissed = missedSet?.has(n.index)
+          const cls = `roll-note ${isHit ? 'hit' : isMissed ? 'missed' : n.isLeftHand ? 'lh' : ''}`
+          return (
+            <div
+              key={n.index}
+              className={cls}
+              style={{
+                left: `${n.left}%`,
+                width: `${n.width}%`,
+                top: n.top,
+                height: n.h,
+              }}
+            />
+          )
+        })}
+      </div>
 
-        const isHit = hitSet?.has(index)
-        const isMissed = missedSet?.has(index)
-        const isLeftHand = note.track % 2 === 1
-        const className = `roll-note ${isHit ? 'hit' : isMissed ? 'missed' : isLeftHand ? 'lh' : ''}`
-
-        return (
-          <div
-            key={`${note.track}-${index}-${note.start}`}
-            className={className}
-            style={{ left: `${left}%`, width: `${width}%`, top: y, height: h }}
-          />
-        )
-      })}
       {notes.length === 0 ? (
         <div className="absolute inset-0 grid place-items-center text-center text-sm text-[color:var(--text-2)]">
           <div>

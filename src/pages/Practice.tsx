@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MidiDeviceSelector } from '../components/MidiDeviceSelector'
 import { PianoKeyboard } from '../components/PianoKeyboard'
@@ -17,13 +17,23 @@ interface Props {
   onSessionComplete: (payload: PracticeSession) => void
 }
 
+function formatTime(s: number) {
+  if (!Number.isFinite(s) || s < 0) s = 0
+  const m = Math.floor(s / 60)
+  const sec = Math.floor(s % 60)
+  return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
 export function Practice({ song, onSessionComplete }: Props) {
   const navigate = useNavigate()
   const notes = useMemo(() => song?.midi?.tracks.flatMap((track) => track.notes) ?? [], [song])
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [showSummary, setShowSummary] = useState(false)
+  const [hasStarted, setHasStarted] = useState(false)
 
-  const engine = usePracticeEngine(notes)
+  const finishedRef = useRef(false)
+  const finishCbRef = useRef<() => void>(() => {})
+  const engine = usePracticeEngine(notes, () => finishCbRef.current())
   const scoring = useScoring(engine.filteredNotes)
 
   const midiInput = useMidiInput((midi, on) => {
@@ -32,15 +42,37 @@ export function Practice({ song, onSessionComplete }: Props) {
     engine.registerHit(midi)
   })
 
-  const leftHandActive = engine.handMode === 'left' || engine.handMode === 'both'
-    ? midiInput.activeNotes.filter((m) => {
-        const isLeft = engine.filteredNotes.some((n) => n.midi === m && n.track % 2 === 1)
-        return isLeft
-      })
-    : []
+  const leftHandActive = midiInput.activeNotes.filter((m) =>
+    engine.filteredNotes.some((n) => n.midi === m && n.track % 2 === 1),
+  )
 
-  const finishRun = () => {
+  const handlePlay = () => {
+    if (!hasStarted) {
+      scoring.reset()
+      setShowSummary(false)
+      setStartedAt(Date.now())
+      setHasStarted(true)
+      void engine.start()
+    } else {
+      finishedRef.current = false
+      void engine.resume()
+    }
+  }
+
+  const handleRestart = () => {
+    scoring.reset()
+    setShowSummary(false)
+    setStartedAt(Date.now())
+    setHasStarted(true)
+    finishedRef.current = false
+    void engine.start()
+  }
+
+  const handleFinish = () => {
+    if (finishedRef.current) return
+    finishedRef.current = true
     engine.stop()
+    setHasStarted(false)
     if (!song || startedAt === null) return
     onSessionComplete({
       id: `${song.id}-${Date.now()}`,
@@ -51,6 +83,12 @@ export function Practice({ song, onSessionComplete }: Props) {
     })
     setShowSummary(true)
   }
+  useEffect(() => {
+    finishCbRef.current = handleFinish
+  })
+
+  const totalDuration = engine.duration || 1
+  const progress = Math.min(1, engine.currentTime / totalDuration)
 
   if (!song) {
     return (
@@ -78,21 +116,41 @@ export function Practice({ song, onSessionComplete }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-4 border-b border-white/5 bg-black/20 px-6 py-3">
+      <div className="practice-header">
         <button className="btn btn-ghost !py-1.5 !px-3 text-xs" onClick={() => navigate('/library')}>
           <Icon name="chevron-right" size={12} className="rotate-180" /> Library
         </button>
-        <div className="leading-tight">
-          <h1 className="text-lg font-semibold">{song.title}</h1>
+        <div className="leading-tight min-w-0">
+          <h1 className="truncate text-lg font-semibold">{song.title}</h1>
           <div className="mt-1 flex items-center gap-2">
             <span className="chip violet">{song.tags.anime}</span>
             <span className="chip cyan">{song.tags.difficulty}</span>
             {song.tags.bpm ? <span className="chip">{Math.round(song.tags.bpm)} BPM</span> : null}
+            {engine.running ? <span className="chip emerald">● Playing</span> : null}
           </div>
         </div>
-        <div className="ml-auto text-xs text-[color:var(--text-2)]">
-          <span className="font-mono text-base text-[color:var(--text-0)]">{engine.currentTime.toFixed(1)}s</span>
+        <div className="ml-auto flex items-center gap-4">
+          <div className="text-right font-mono">
+            <div className="text-base text-[color:var(--text-0)]">{formatTime(engine.currentTime)}</div>
+            <div className="text-[10px] uppercase tracking-wider text-[color:var(--text-2)]">
+              of {formatTime(totalDuration)}
+            </div>
+          </div>
+          <div className="hidden text-right text-xs text-[color:var(--text-2)] md:block">
+            <div>
+              Hit{' '}
+              <span className="font-mono text-sm text-emerald-300">{scoring.hitSet.size}</span>
+              {' / '}
+              <span className="font-mono text-sm text-[color:var(--text-1)]">
+                {engine.filteredNotes.length}
+              </span>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
       </div>
 
       <div className="space-y-3 px-6 pt-4">
@@ -110,27 +168,37 @@ export function Practice({ song, onSessionComplete }: Props) {
           metronomeOn={engine.metronomeOn}
           countIn={engine.countIn}
           running={engine.running}
+          canResume={hasStarted && !engine.running && engine.currentTime > 0}
           onMode={engine.setMode}
           onHandMode={engine.setHandMode}
           onSpeed={engine.setSpeed}
           onMetronome={engine.setMetronomeOn}
           onCountIn={engine.setCountIn}
-          onStart={() => {
-            scoring.reset()
-            setShowSummary(false)
-            setStartedAt(Date.now())
-            void engine.start()
-          }}
-          onStop={finishRun}
+          onPlay={handlePlay}
+          onPause={engine.pause}
+          onRestart={handleRestart}
         />
       </div>
 
-      <div className="mt-4 flex-1 min-h-0 px-6">
+      <div className="relative mt-4 flex-1 min-h-0 px-6">
         <PianoRoll
           notes={engine.filteredNotes}
           currentTime={engine.currentTime}
           hitSet={scoring.hitSet}
         />
+        {engine.countdown !== null ? (
+          <div className="countdown-overlay">
+            <div className="countdown-number">{engine.countdown}</div>
+          </div>
+        ) : null}
+        {!engine.running && engine.countdown === null && engine.currentTime === 0 && !hasStarted ? (
+          <div className="play-prompt">
+            <div className="play-prompt-card">
+              <Icon name="play" size={42} className="text-violet-200" />
+              <p className="mt-3 text-sm text-[color:var(--text-1)]">Press Play to start</p>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <PianoKeyboard
@@ -141,16 +209,17 @@ export function Practice({ song, onSessionComplete }: Props) {
 
       {showSummary ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-6 backdrop-blur" onClick={() => setShowSummary(false)}>
-          <div className="w-full max-w-2xl space-y-3" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-2xl space-y-3 animate-pop" onClick={(e) => e.stopPropagation()}>
             <ScoreSummary result={scoring.result} />
             <div className="flex justify-end gap-2">
               <button className="btn btn-ghost" onClick={() => setShowSummary(false)}>Close</button>
-              <button className="btn btn-primary" onClick={() => {
-                setShowSummary(false)
-                scoring.reset()
-                setStartedAt(Date.now())
-                void engine.start()
-              }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setShowSummary(false)
+                  handleRestart()
+                }}
+              >
                 <Icon name="play" size={14} /> Try Again
               </button>
             </div>
