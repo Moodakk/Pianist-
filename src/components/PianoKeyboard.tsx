@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
 interface Props {
@@ -21,6 +21,8 @@ export function PianoKeyboard({
   max = DEFAULT_MAX,
   showLabels = true,
 }: Props) {
+  const [mouseDown, setMouseDown] = useState<number | null>(null)
+
   const { whiteKeys, blackKeys } = useMemo(() => {
     const whites: number[] = []
     const blacks: number[] = []
@@ -40,7 +42,18 @@ export function PianoKeyboard({
   const whiteWidthPct = 100 / whiteKeys.length
 
   const isLeftHand = (m: number) => leftHandNotes.includes(m)
-  const isActive = (m: number) => activeNotes.includes(m) || leftHandNotes.includes(m)
+  const isActive = (m: number) =>
+    activeNotes.includes(m) || leftHandNotes.includes(m) || mouseDown === m
+
+  const press = (midi: number) => {
+    setMouseDown(midi)
+    onPress?.(midi, true)
+  }
+  const release = (midi: number) => {
+    if (mouseDown !== midi) return
+    setMouseDown(null)
+    onPress?.(midi, false)
+  }
 
   return (
     <div className="piano">
@@ -48,9 +61,13 @@ export function PianoKeyboard({
         {whiteKeys.map((midi) => (
           <button
             key={midi}
-            onMouseDown={() => onPress?.(midi, true)}
-            onMouseUp={() => onPress?.(midi, false)}
-            onMouseLeave={() => onPress?.(midi, false)}
+            tabIndex={-1}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              press(midi)
+            }}
+            onPointerUp={() => release(midi)}
+            onPointerLeave={() => release(midi)}
             className={`key-white ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
             aria-label={midiToName(midi)}
           >
@@ -67,9 +84,13 @@ export function PianoKeyboard({
           return (
             <button
               key={midi}
-              onMouseDown={() => onPress?.(midi, true)}
-              onMouseUp={() => onPress?.(midi, false)}
-              onMouseLeave={() => onPress?.(midi, false)}
+              tabIndex={-1}
+              onPointerDown={(e) => {
+                e.preventDefault()
+                press(midi)
+              }}
+              onPointerUp={() => release(midi)}
+              onPointerLeave={() => release(midi)}
               className={`key-black ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
               style={{ left: `${left}%`, width: `${whiteWidthPct * 0.6}%` }}
               aria-label={midiToName(midi)}
