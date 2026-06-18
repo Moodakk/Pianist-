@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import type { MidiNote } from '../types/midi'
-import { isBlackKey } from '../utils/midiHelpers'
+import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
 interface Props {
   notes: MidiNote[]
@@ -26,6 +26,8 @@ interface PositionedNote {
   width: number
   isBlack: boolean
   isLeftHand: boolean
+  name: string
+  shortName: string
 }
 
 export function PianoRoll({
@@ -82,6 +84,7 @@ export function PianoRoll({
           width = whiteWidthPct * 0.84
         }
 
+        const name = midiToName(note.midi)
         return {
           index: originalIndex,
           midi: note.midi,
@@ -92,6 +95,8 @@ export function PianoRoll({
           width,
           isBlack,
           isLeftHand: note.track % 2 === 1,
+          name,
+          shortName: name.replace(/\d+$/, ''),
         }
       })
   }, [notes, hitLine, pxPerSec, whiteWidthPct, whiteIndexFor, min, max])
@@ -117,7 +122,11 @@ export function PianoRoll({
         {positioned.map((n) => {
           const isHit = hitSet?.has(n.index)
           const isMissed = missedSet?.has(n.index)
-          const cls = `roll-note ${isHit ? 'hit' : isMissed ? 'missed' : n.isLeftHand ? 'lh' : ''}`
+          const cls = `roll-note ${n.isBlack ? 'black' : 'white'} ${
+            isHit ? 'hit' : isMissed ? 'missed' : n.isLeftHand ? 'lh' : ''
+          }`
+          const showLabel = n.h >= 22
+          const label = n.h >= 60 ? n.name : n.shortName
           return (
             <div
               key={n.index}
@@ -128,7 +137,9 @@ export function PianoRoll({
                 top: n.top,
                 height: n.h,
               }}
-            />
+            >
+              {showLabel ? <span className="note-label">{label}</span> : null}
+            </div>
           )
         })}
       </div>

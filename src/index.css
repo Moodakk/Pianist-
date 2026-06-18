@@ -263,8 +263,28 @@ button {
 }
 .piano .key-label {
   position: absolute; bottom: 8px; left: 0; right: 0;
-  text-align: center; font-size: 10px; color: rgba(0,0,0,0.4);
+  text-align: center; font-size: 10px; color: rgba(0,0,0,0.45);
   font-weight: 500;
+  pointer-events: none;
+}
+.piano .key-label.c-label {
+  font-weight: 700;
+  color: rgba(124,92,255,0.85);
+  font-size: 11px;
+}
+.piano .key-white.active .key-label,
+.piano .key-white.active .key-label.c-label {
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.piano .key-label-black {
+  position: absolute; bottom: 6px; left: 0; right: 0;
+  text-align: center; font-size: 8px; color: rgba(255,255,255,0.5);
+  font-weight: 500;
+  pointer-events: none;
+}
+.piano .key-black.active .key-label-black {
+  color: rgba(255,255,255,0.95);
 }
 .piano .black-row {
   position: absolute; top: 0; left: 0; right: 0; height: 60%;
@@ -328,6 +348,32 @@ button {
   background: linear-gradient(180deg, #fda4af, #f43f5e);
   box-shadow: 0 0 12px rgba(244,63,94,0.5);
 }
+.roll .roll-note.black {
+  background: linear-gradient(180deg, #7c5cff, #4628d6);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.roll .roll-note.black.lh {
+  background: linear-gradient(180deg, #38bdf8, #0369a1);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.roll .roll-note.black.hit {
+  background: linear-gradient(180deg, #34d399, #047857);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+.note-label {
+  position: absolute;
+  bottom: 4px;
+  left: 0; right: 0;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  pointer-events: none;
+  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
+}
+.roll .roll-note.black .note-label { font-size: 9px; }
 
 /* Pill / chip */
 .chip {

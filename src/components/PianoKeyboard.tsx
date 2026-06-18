@@ -71,8 +71,10 @@ export function PianoKeyboard({
             className={`key-white ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
             aria-label={midiToName(midi)}
           >
-            {showLabels && midi % 12 === 0 ? (
-              <span className="key-label">{midiToName(midi)}</span>
+            {showLabels ? (
+              <span className={`key-label ${midi % 12 === 0 ? 'c-label' : ''}`}>
+                {midi % 12 === 0 ? midiToName(midi) : midiToName(midi).replace(/\d+$/, '')}
+              </span>
             ) : null}
           </button>
         ))}
@@ -94,7 +96,11 @@ export function PianoKeyboard({
               className={`key-black ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
               style={{ left: `${left}%`, width: `${whiteWidthPct * 0.6}%` }}
               aria-label={midiToName(midi)}
-            />
+            >
+              {showLabels ? (
+                <span className="key-label-black">{midiToName(midi).replace(/\d+$/, '')}</span>
+              ) : null}
+            </button>
           )
         })}
       </div>
