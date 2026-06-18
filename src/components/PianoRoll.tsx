@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { memo, useEffect, useMemo, useRef } from 'react'
 import type { MidiNote } from '../types/midi'
 import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
@@ -63,14 +63,12 @@ export function PianoRoll({
   const whiteWidthPct = 100 / whiteCount
   const hitLine = height - 24
 
-  // Pre-compute static positions (don't depend on currentTime — only on note + dimensions)
   const positioned = useMemo<PositionedNote[]>(() => {
     return notes
       .filter((note) => note.midi >= min && note.midi <= max)
       .map((note, originalIndex) => {
         const isBlack = isBlackKey(note.midi)
         const h = Math.max(10, note.duration * pxPerSec)
-        // Static top: where the note WOULD be at currentTime = 0
         const top = hitLine - note.start * pxPerSec - h
 
         let left: number
@@ -101,8 +99,13 @@ export function PianoRoll({
       })
   }, [notes, hitLine, pxPerSec, whiteWidthPct, whiteIndexFor, min, max])
 
-  // The notes layer translates downward as currentTime increases.
-  const layerTransform = `translate3d(0, ${currentTime * pxPerSec}px, 0)`
+  const layerRef = useRef<HTMLDivElement>(null)
+
+  // Drive the transform via ref so React doesn't reconcile note children every frame.
+  useEffect(() => {
+    const el = layerRef.current
+    if (el) el.style.transform = `translate3d(0, ${currentTime * pxPerSec}px, 0)`
+  }, [currentTime, pxPerSec])
 
   return (
     <div className="roll" style={{ height }}>
@@ -110,39 +113,12 @@ export function PianoRoll({
       <div className="hit-line" style={{ top: hitLine }} />
       <div className="hit-glow" style={{ top: hitLine - 2 }} />
 
-      <div
-        className="roll-layer"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          transform: layerTransform,
-          willChange: 'transform',
-        }}
-      >
-        {positioned.map((n) => {
-          const isHit = hitSet?.has(n.index)
-          const isMissed = missedSet?.has(n.index)
-          const cls = `roll-note ${n.isBlack ? 'black' : 'white'} ${
-            isHit ? 'hit' : isMissed ? 'missed' : n.isLeftHand ? 'lh' : ''
-          }`
-          const showLabel = n.h >= 22
-          const label = n.h >= 60 ? n.name : n.shortName
-          return (
-            <div
-              key={n.index}
-              className={cls}
-              style={{
-                left: `${n.left}%`,
-                width: `${n.width}%`,
-                top: n.top,
-                height: n.h,
-              }}
-            >
-              {showLabel ? <span className="note-label">{label}</span> : null}
-            </div>
-          )
-        })}
-      </div>
+      <NotesLayer
+        innerRef={layerRef}
+        positioned={positioned}
+        hitSet={hitSet}
+        missedSet={missedSet}
+      />
 
       {notes.length === 0 ? (
         <div className="absolute inset-0 grid place-items-center text-center text-sm text-[color:var(--text-2)]">
@@ -155,3 +131,40 @@ export function PianoRoll({
     </div>
   )
 }
+
+interface LayerProps {
+  innerRef: React.RefObject<HTMLDivElement | null>
+  positioned: PositionedNote[]
+  hitSet?: Set<number>
+  missedSet?: Set<number>
+}
+
+const NotesLayer = memo(function NotesLayer({ innerRef, positioned, hitSet, missedSet }: LayerProps) {
+  return (
+    <div ref={innerRef} className="roll-layer">
+      {positioned.map((n) => {
+        const isHit = hitSet?.has(n.index)
+        const isMissed = missedSet?.has(n.index)
+        const cls = `roll-note ${n.isBlack ? 'black' : 'white'} ${
+          isHit ? 'hit' : isMissed ? 'missed' : n.isLeftHand ? 'lh' : ''
+        }`
+        const showLabel = n.h >= 22
+        const label = n.h >= 60 ? n.name : n.shortName
+        return (
+          <div
+            key={n.index}
+            className={cls}
+            style={{
+              left: `${n.left}%`,
+              width: `${n.width}%`,
+              top: n.top,
+              height: n.h,
+            }}
+          >
+            {showLabel ? <span className="note-label">{label}</span> : null}
+          </div>
+        )
+      })}
+    </div>
+  )
+})
