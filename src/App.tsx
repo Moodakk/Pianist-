@@ -74,7 +74,7 @@ export default function App() {
           </div>
         )}
 
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className={`min-w-0 flex-1 ${isPractice ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <Routes>
             <Route path="/" element={<Dashboard songs={library.songs} onPlay={(song) => { setPracticeSong(song) }} />} />
             <Route

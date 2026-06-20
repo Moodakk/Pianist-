@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { MidiNote } from '../types/midi'
 import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
@@ -37,9 +37,24 @@ export function PianoRoll({
   missedSet,
   min = DEFAULT_MIN,
   max = DEFAULT_MAX,
-  height = 460,
+  height: heightProp,
   pxPerSec = 220,
 }: Props) {
+  const rollRef = useRef<HTMLDivElement>(null)
+  const [measuredHeight, setMeasuredHeight] = useState<number>(heightProp ?? 360)
+
+  useLayoutEffect(() => {
+    if (heightProp !== undefined || !rollRef.current) return
+    const el = rollRef.current
+    const observer = new ResizeObserver((entries) => {
+      const h = entries[0]?.contentRect.height
+      if (h && Math.abs(h - measuredHeight) > 1) setMeasuredHeight(h)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [heightProp, measuredHeight])
+
+  const height = heightProp ?? measuredHeight
   const whiteCount = useMemo(() => {
     let c = 0
     for (let m = min; m <= max; m++) if (!isBlackKey(m)) c++
@@ -108,7 +123,11 @@ export function PianoRoll({
   }, [currentTime, pxPerSec])
 
   return (
-    <div className="roll" style={{ height }}>
+    <div
+      ref={rollRef}
+      className="roll"
+      style={heightProp !== undefined ? { height: heightProp } : { height: '100%' }}
+    >
       <div className="grid-bg" />
       <div className="hit-line" style={{ top: hitLine }} />
       <div className="hit-glow" style={{ top: hitLine - 2 }} />

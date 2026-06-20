@@ -59,8 +59,9 @@ function PianoKeyboardImpl({
     <div className="piano">
       <div className="white-row">
         {whiteKeys.map((midi) => (
-          <button
+          <div
             key={midi}
+            role="button"
             tabIndex={-1}
             onPointerDown={(e) => {
               e.preventDefault()
@@ -76,7 +77,7 @@ function PianoKeyboardImpl({
                 {midi % 12 === 0 ? midiToName(midi) : midiToName(midi).replace(/\d+$/, '')}
               </span>
             ) : null}
-          </button>
+          </div>
         ))}
       </div>
       <div className="black-row">
@@ -84,8 +85,9 @@ function PianoKeyboardImpl({
           const whiteIdx = whiteIndexFor(midi)
           const left = whiteIdx * whiteWidthPct
           return (
-            <button
+            <div
               key={midi}
+              role="button"
               tabIndex={-1}
               onPointerDown={(e) => {
                 e.preventDefault()
@@ -100,7 +102,7 @@ function PianoKeyboardImpl({
               {showLabels ? (
                 <span className="key-label-black">{midiToName(midi).replace(/\d+$/, '')}</span>
               ) : null}
-            </button>
+            </div>
           )
         })}
       </div>
