@@ -19,9 +19,14 @@ export function PianoKeyboard({ activeNotes, onPress, min = 48, max = 84 }: Prop
           return (
             <button
               key={midi}
-              onMouseDown={() => onPress?.(midi, true)}
+              type="button"
+              onMouseDown={(event) => {
+                event.preventDefault()
+                onPress?.(midi, true)
+              }}
               onMouseUp={() => onPress?.(midi, false)}
-              className={`relative h-full w-6 border ${black ? 'mt-0 h-16 bg-slate-800' : 'bg-white'} ${active ? 'ring-2 ring-cyan-400' : ''}`}
+              onMouseLeave={() => onPress?.(midi, false)}
+              className={`relative h-full w-6 select-none border outline-none ${black ? 'mt-0 h-16 bg-slate-800' : 'bg-white'} ${active ? 'ring-2 ring-cyan-400' : ''}`}
             />
           )
         })}
