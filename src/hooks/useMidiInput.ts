@@ -83,9 +83,17 @@ export function useMidiInput(onNote: (midi: number, on: boolean, velocity?: numb
   }, [access, onNote, selectedDeviceId])
 
   useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false
+      const tag = target.tagName
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable
+    }
+
     const down = (event: KeyboardEvent) => {
-      const midi = keyboardMap[event.key.toLowerCase()]
+      if (event.repeat || isTypingTarget(event.target)) return
+      const midi = keyboardMap[event.code]
       if (!midi) return
+      event.preventDefault()
       setActiveSet((prev) => {
         if (prev.has(midi)) return prev
         const next = new Set(prev)
@@ -96,8 +104,10 @@ export function useMidiInput(onNote: (midi: number, on: boolean, velocity?: numb
     }
 
     const up = (event: KeyboardEvent) => {
-      const midi = keyboardMap[event.key.toLowerCase()]
+      if (isTypingTarget(event.target)) return
+      const midi = keyboardMap[event.code]
       if (!midi) return
+      event.preventDefault()
       setActiveSet((prev) => {
         if (!prev.has(midi)) return prev
         const next = new Set(prev)
