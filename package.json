@@ -1,13 +1,24 @@
 {
-  "name": "anime-piano-trainer",
+  "name": "easy-piano",
+  "productName": "Easy Piano",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Anime piano learning desktop app — falling notes player with MIDI keyboard support.",
+  "author": {
+    "name": "Easy Piano"
+  },
+  "main": "dist-electron/main.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:web": "vite build --mode web",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:build": "npm run build && electron-builder",
+    "electron:build:win": "npm run build && electron-builder --win",
+    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@tonejs/midi": "^2.0.28",
@@ -24,6 +35,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "autoprefixer": "^10.5.0",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
@@ -32,6 +45,44 @@
     "tailwindcss": "^4.3.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vite-plugin-electron": "^0.28.8"
+  },
+  "build": {
+    "appId": "com.easypiano.app",
+    "productName": "Easy Piano",
+    "directories": {
+      "output": "release/${version}"
+    },
+    "files": [
+      "dist",
+      "dist-electron"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "artifactName": "EasyPiano-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Easy Piano"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.music",
+      "artifactName": "EasyPiano-${version}.${ext}"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "category": "Audio",
+      "artifactName": "EasyPiano-${version}.${ext}"
+    }
   }
 }
