@@ -1,4 +1,5 @@
-import { app, BrowserWindow, shell } from 'electron'
+import { app, BrowserWindow, dialog, shell } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -43,8 +44,50 @@ function createWindow() {
   }
 }
 
+function setupAutoUpdater() {
+  if (VITE_DEV_SERVER_URL) return // skip in dev
+
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('checking-for-update', () => console.log('[updater] checking…'))
+  autoUpdater.on('update-not-available', () => console.log('[updater] none'))
+  autoUpdater.on('error', (err) => console.error('[updater] error:', err))
+  autoUpdater.on('download-progress', (p) => {
+    win?.setProgressBar(p.percent / 100)
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[updater] available:', info.version)
+  })
+
+  autoUpdater.on('update-downloaded', async (info) => {
+    win?.setProgressBar(-1)
+    console.log('[updater] downloaded:', info.version)
+
+    const result = await dialog.showMessageBox(win!, {
+      type: 'info',
+      title: 'Update ready',
+      message: `Easy Piano ${info.version} is downloaded`,
+      detail: 'Restart the app to install the update. You can also install it later when you quit.',
+      buttons: ['Restart now', 'Later'],
+      defaultId: 0,
+      cancelId: 1,
+    })
+
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall()
+    }
+  })
+
+  autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+    console.error('[updater] check failed:', err)
+  })
+}
+
 app.whenReady().then(() => {
   createWindow()
+  setupAutoUpdater()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
