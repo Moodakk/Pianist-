@@ -2,7 +2,7 @@
   "name": "easy-piano",
   "productName": "Easy Piano",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Anime piano learning desktop app — falling notes player with MIDI keyboard support.",
   "author": {
     "name": "Easy Piano"
