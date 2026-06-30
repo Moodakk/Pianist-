@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Route, Routes, useLocation } from 'react-router-dom'
+import { AudioToMidi } from './pages/AudioToMidi'
 import { Dashboard } from './pages/Dashboard'
 import { ImportMidi } from './pages/ImportMidi'
 import { Library } from './pages/Library'
@@ -14,6 +15,7 @@ const nav: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/library', label: 'Library', icon: 'library' },
   { to: '/import', label: 'Import', icon: 'upload' },
+  { to: '/audio-to-midi', label: 'Audio→MIDI', icon: 'mic' },
   { to: '/practice', label: 'Practice', icon: 'piano' },
   { to: '/progress', label: 'Progress', icon: 'progress' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
@@ -84,6 +86,10 @@ export default function App() {
             <Route
               path="/import"
               element={<ImportMidi onSave={(song) => { library.upsertImportedSong(song); setPracticeSong(song) }} />}
+            />
+            <Route
+              path="/audio-to-midi"
+              element={<AudioToMidi onSave={(song) => { library.upsertImportedSong(song); setPracticeSong(song) }} />}
             />
             <Route
               path="/practice"
