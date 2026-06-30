@@ -1,7 +1,9 @@
 import { app, BrowserWindow, dialog, shell } from 'electron'
-import { autoUpdater } from 'electron-updater'
+import electronUpdater from 'electron-updater'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+const { autoUpdater } = electronUpdater
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
