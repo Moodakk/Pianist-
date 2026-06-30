@@ -24,12 +24,13 @@ def _winget_ffmpeg_candidates() -> list[Path]:
         Path(local) / "Microsoft" / "WinGet" / "Packages",
     ]
     candidates: list[Path] = []
+    packages = roots[1]
+    if packages.is_dir():
+        # Prefer real binaries over WinGet shim links — more reliable for subprocess.
+        candidates.extend(sorted(packages.glob("Gyan.FFmpeg*/ffmpeg-*/bin/ffmpeg.exe")))
     links = roots[0]
     if links.is_file():
         candidates.append(links)
-    packages = roots[1]
-    if packages.is_dir():
-        candidates.extend(sorted(packages.glob("Gyan.FFmpeg*/ffmpeg-*/bin/ffmpeg.exe")))
     return candidates
 
 
@@ -50,8 +51,14 @@ def _ffmpeg_bin() -> str:
 
     raise RuntimeError(
         "ffmpeg is not installed or not on PATH. "
-        "Install ffmpeg before running conversions."
+        "Install ffmpeg before running conversions "
+        "(Windows: winget install Gyan.FFmpeg)."
     )
+
+
+def resolve_ffmpeg_bin() -> str:
+    """Resolve ffmpeg once at startup; surfaces install issues early."""
+    return _ffmpeg_bin()
 
 
 def to_wav(input_path: Path, output_path: Path, mono: bool = False) -> Path:
