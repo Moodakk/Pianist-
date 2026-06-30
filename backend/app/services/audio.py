@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -12,14 +14,44 @@ from ..config import logger
 TARGET_SR = 44100
 
 
+def _winget_ffmpeg_candidates() -> list[Path]:
+    """Common install locations when winget adds ffmpeg but PATH is stale."""
+    local = os.environ.get("LOCALAPPDATA")
+    if not local:
+        return []
+    roots = [
+        Path(local) / "Microsoft" / "WinGet" / "Links" / "ffmpeg.exe",
+        Path(local) / "Microsoft" / "WinGet" / "Packages",
+    ]
+    candidates: list[Path] = []
+    links = roots[0]
+    if links.is_file():
+        candidates.append(links)
+    packages = roots[1]
+    if packages.is_dir():
+        candidates.extend(sorted(packages.glob("Gyan.FFmpeg*/ffmpeg-*/bin/ffmpeg.exe")))
+    return candidates
+
+
 def _ffmpeg_bin() -> str:
+    env_bin = os.environ.get("AUDIO2MIDI_FFMPEG") or os.environ.get("FFMPEG_PATH")
+    if env_bin and Path(env_bin).is_file():
+        return env_bin
+
     binary = shutil.which("ffmpeg")
-    if not binary:
-        raise RuntimeError(
-            "ffmpeg is not installed or not on PATH. "
-            "Install ffmpeg before running conversions."
-        )
-    return binary
+    if binary:
+        return binary
+
+    if sys.platform == "win32":
+        for candidate in _winget_ffmpeg_candidates():
+            if candidate.is_file():
+                logger.info("using ffmpeg from %s", candidate)
+                return str(candidate)
+
+    raise RuntimeError(
+        "ffmpeg is not installed or not on PATH. "
+        "Install ffmpeg before running conversions."
+    )
 
 
 def to_wav(input_path: Path, output_path: Path, mono: bool = False) -> Path:
