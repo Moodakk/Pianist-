@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { MidiNote } from '../types/midi'
 import type { ScoreResult } from '../types/scoring'
 import { gradeFromScore } from '../utils/timing'
@@ -22,9 +22,13 @@ export function useScoring(notes: MidiNote[]) {
     deltas: [],
   })
 
-  const onNoteInput = (midi: number, currentTime: number) => {
+  const notesRef = useRef(notes)
+  useEffect(() => { notesRef.current = notes }, [notes])
+
+  const onNoteInput = useCallback((midi: number, currentTime: number) => {
     setState((prev) => {
-      const candidates = notes
+      const currentNotes = notesRef.current
+      const candidates = currentNotes
         .map((note, index) => ({ note, index }))
         .filter(({ note, index }) => note.midi === midi && !prev.hit.has(index) && Math.abs(note.start - currentTime) <= TOLERANCE_SEC)
 
@@ -45,11 +49,11 @@ export function useScoring(notes: MidiNote[]) {
         deltas: [...prev.deltas, delta],
       }
     })
-  }
+  }, [])
 
-  const reset = () => {
+  const reset = useCallback(() => {
     setState({ hit: new Set(), wrongNotes: 0, combo: 0, bestCombo: 0, deltas: [] })
-  }
+  }, [])
 
   const result = useMemo<ScoreResult>(() => {
     const correctNotes = state.hit.size
@@ -83,5 +87,8 @@ export function useScoring(notes: MidiNote[]) {
     }
   }, [notes.length, state])
 
-  return { onNoteInput, reset, result, hitSet: state.hit }
+  return useMemo(
+    () => ({ onNoteInput, reset, result, hitSet: state.hit }),
+    [onNoteInput, reset, result, state.hit],
+  )
 }

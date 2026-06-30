@@ -1,36 +1,129 @@
-import { isBlackKey } from '../utils/midiHelpers'
+import { memo, useMemo, useState } from 'react'
+import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
 interface Props {
   activeNotes: number[]
+  leftHandNotes?: number[]
   onPress?: (midi: number, on: boolean) => void
   min?: number
   max?: number
+  showLabels?: boolean
 }
 
-export function PianoKeyboard({ activeNotes, onPress, min = 48, max = 84 }: Props) {
-  const notes = Array.from({ length: max - min + 1 }, (_, i) => min + i)
+const DEFAULT_MIN = 36
+const DEFAULT_MAX = 96
+
+function PianoKeyboardImpl({
+  activeNotes,
+  leftHandNotes = [],
+  onPress,
+  min = DEFAULT_MIN,
+  max = DEFAULT_MAX,
+  showLabels = true,
+}: Props) {
+  const [mouseDown, setMouseDown] = useState<number | null>(null)
+
+  const { whiteKeys, blackKeys } = useMemo(() => {
+    const whites: number[] = []
+    const blacks: number[] = []
+    for (let m = min; m <= max; m++) {
+      if (isBlackKey(m)) blacks.push(m)
+      else whites.push(m)
+    }
+    return { whiteKeys: whites, blackKeys: blacks }
+  }, [min, max])
+
+  const whiteIndexFor = (midi: number) => {
+    let idx = 0
+    for (let m = min; m < midi; m++) if (!isBlackKey(m)) idx++
+    return idx
+  }
+
+  const whiteWidthPct = 100 / whiteKeys.length
+
+  const isLeftHand = (m: number) => leftHandNotes.includes(m)
+  const isActive = (m: number) =>
+    activeNotes.includes(m) || leftHandNotes.includes(m) || mouseDown === m
+
+  const press = (midi: number) => {
+    setMouseDown(midi)
+    onPress?.(midi, true)
+  }
+  const release = (midi: number) => {
+    if (mouseDown !== midi) return
+    setMouseDown(null)
+    onPress?.(midi, false)
+  }
 
   return (
-    <div className="relative h-28 w-full overflow-x-auto rounded-lg border border-slate-700 bg-slate-950 p-1">
-      <div className="relative flex h-full min-w-max">
-        {notes.map((midi) => {
-          const active = activeNotes.includes(midi)
-          const black = isBlackKey(midi)
+    <div className="piano">
+      <div className="white-row">
+        {whiteKeys.map((midi) => (
+          <div
+            key={midi}
+            role="button"
+            tabIndex={-1}
+            onPointerDown={(e) => {
+              e.preventDefault()
+              press(midi)
+            }}
+            onPointerUp={() => release(midi)}
+            onPointerLeave={() => release(midi)}
+            className={`key-white ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
+            aria-label={midiToName(midi)}
+          >
+            {showLabels ? (
+              <span className={`key-label ${midi % 12 === 0 ? 'c-label' : ''}`}>
+                {midi % 12 === 0 ? midiToName(midi) : midiToName(midi).replace(/\d+$/, '')}
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <div className="black-row">
+        {blackKeys.map((midi) => {
+          const whiteIdx = whiteIndexFor(midi)
+          const left = whiteIdx * whiteWidthPct
           return (
-            <button
+            <div
               key={midi}
-              type="button"
-              onMouseDown={(event) => {
-                event.preventDefault()
-                onPress?.(midi, true)
+              role="button"
+              tabIndex={-1}
+              onPointerDown={(e) => {
+                e.preventDefault()
+                press(midi)
               }}
-              onMouseUp={() => onPress?.(midi, false)}
-              onMouseLeave={() => onPress?.(midi, false)}
-              className={`relative h-full w-6 select-none border outline-none ${black ? 'mt-0 h-16 bg-slate-800' : 'bg-white'} ${active ? 'ring-2 ring-cyan-400' : ''}`}
-            />
+              onPointerUp={() => release(midi)}
+              onPointerLeave={() => release(midi)}
+              className={`key-black ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
+              style={{ left: `${left}%`, width: `${whiteWidthPct * 0.6}%` }}
+              aria-label={midiToName(midi)}
+            >
+              {showLabels ? (
+                <span className="key-label-black">{midiToName(midi).replace(/\d+$/, '')}</span>
+              ) : null}
+            </div>
           )
         })}
       </div>
     </div>
   )
 }
+
+function arraysEqual(a: number[], b: number[]) {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+  return true
+}
+
+export const PianoKeyboard = memo(PianoKeyboardImpl, (prev, next) => {
+  return (
+    arraysEqual(prev.activeNotes, next.activeNotes) &&
+    arraysEqual(prev.leftHandNotes ?? [], next.leftHandNotes ?? []) &&
+    prev.onPress === next.onPress &&
+    prev.min === next.min &&
+    prev.max === next.max &&
+    prev.showLabels === next.showLabels
+  )
+})
