@@ -10,12 +10,6 @@ services:
     environment:
       AUDIO2MIDI_LOG_LEVEL: INFO
       AUDIO2MIDI_MAX_UPLOAD_MB: "120"
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_BASE: http://backend:8000
-    depends_on:
-      - backend
+# The frontend is the Vite app at the repo root. Run it with:
+#   npm install && npm run dev
+# Vite proxies /api/* to this backend (see vite.config.ts).
