@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import electron from 'vite-plugin-electron/simple'
 
+const backend = process.env.VITE_AUDIO2MIDI_BACKEND || 'http://localhost:8000'
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? './' : '/',
   plugins: [
@@ -29,5 +30,15 @@ export default defineConfig(({ command }) => ({
       },
     }),
   ],
-  server: { port: 5173, strictPort: true },
+  server: {
+    port: 5173,
+    strictPort: true,
+    proxy: {
+      // Audio-to-MIDI backend (FastAPI in /backend) — see AUDIO2MIDI.md
+      '/api': {
+        target: backend,
+        changeOrigin: true,
+      },
+    },
+  },
 }))

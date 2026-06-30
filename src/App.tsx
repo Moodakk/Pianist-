@@ -15,7 +15,7 @@ const nav: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'home' },
   { to: '/library', label: 'Library', icon: 'library' },
   { to: '/import', label: 'Import', icon: 'upload' },
-  { to: '/audio-to-midi', label: 'Convert', icon: 'mic' },
+  { to: '/audio-to-midi', label: 'Audio→MIDI', icon: 'mic' },
   { to: '/practice', label: 'Practice', icon: 'piano' },
   { to: '/progress', label: 'Progress', icon: 'progress' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
@@ -87,6 +87,7 @@ export default function App() {
               path="/import"
               element={
                 <ImportMidi
+                  apiBaseUrl={library.settings.apiBaseUrl}
                   onSave={(song) => { library.upsertImportedSong(song); setPracticeSong(song) }}
                 />
               }
