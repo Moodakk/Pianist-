@@ -87,7 +87,6 @@ export default function App() {
               path="/import"
               element={
                 <ImportMidi
-                  apiBaseUrl={library.settings.apiBaseUrl}
                   onSave={(song) => { library.upsertImportedSong(song); setPracticeSong(song) }}
                 />
               }
