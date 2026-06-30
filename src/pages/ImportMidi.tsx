@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useMidiParser } from '../hooks/useMidiParser'
+import { Link, useNavigate } from 'react-router-dom'
 import { Icon } from '../components/Icon'
+import { useMidiParser } from '../hooks/useMidiParser'
 import type { TrackAssignment } from '../types/midi'
 import type { Song } from '../types/song'
 
@@ -77,6 +77,15 @@ export function ImportMidi({ onSave }: Props) {
 
   return (
     <div className="space-y-6 p-8">
+      <div className="panel flex flex-wrap items-center justify-between gap-4 p-4">
+        <p className="text-sm text-[color:var(--text-2)]">
+          Have an audio file instead? Convert it to MIDI first.
+        </p>
+        <Link to="/audio-to-midi" className="btn btn-primary">
+          <Icon name="mic" size={14} /> Audio to MIDI
+        </Link>
+      </div>
+
       <div
         className="panel grid place-items-center border-dashed p-12 text-center transition hover:border-violet-400/50"
         style={{ borderStyle: 'dashed' }}

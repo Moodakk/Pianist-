@@ -1,4 +1,7 @@
+import { useState } from 'react'
+import { getApiBaseUrl } from '../config/api'
 import { Icon } from '../components/Icon'
+import { checkApiHealth } from '../services/audioConvertApi'
 
 interface Props {
   settings: {
@@ -8,17 +11,85 @@ interface Props {
     metronomeVolume: number
     keyboardRange: string
     practiceDifficulty: string
+    apiBaseUrl: string
+    apiAuthToken: string
   }
   onChange: (settings: Props['settings']) => void
   onReset: () => void
 }
 
 export function Settings({ settings, onChange, onReset }: Props) {
+  const [healthStatus, setHealthStatus] = useState<'idle' | 'ok' | 'error' | 'testing'>('idle')
+
   const update = <K extends keyof Props['settings']>(key: K, value: Props['settings'][K]) =>
     onChange({ ...settings, [key]: value })
 
+  const testConnection = async () => {
+    setHealthStatus('testing')
+    const ok = await checkApiHealth(settings.apiBaseUrl)
+    setHealthStatus(ok ? 'ok' : 'error')
+  }
+
+  const resolvedUrl = getApiBaseUrl(settings.apiBaseUrl)
+
   return (
     <div className="space-y-6 p-8">
+      <SectionCard
+        icon="upload"
+        title="Audio converter API"
+        description="URL of the deployed audio-to-MIDI backend. Leave empty to use VITE_API_BASE_URL or localhost:8000."
+      >
+        <Field label="API base URL">
+          <input
+            className="input"
+            placeholder="https://your-backend.example.com"
+            value={settings.apiBaseUrl}
+            onChange={(e) => {
+              setHealthStatus('idle')
+              update('apiBaseUrl', e.target.value)
+            }}
+          />
+        </Field>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" className="btn btn-ghost" onClick={() => void testConnection()}>
+            Test connection
+          </button>
+          <span className="text-xs text-[color:var(--text-2)]">
+            Resolves to: <span className="font-mono">{resolvedUrl}</span>
+          </span>
+          {healthStatus === 'testing' ? (
+            <span className="chip">Checking…</span>
+          ) : null}
+          {healthStatus === 'ok' ? (
+            <span className="chip violet">Connected</span>
+          ) : null}
+          {healthStatus === 'error' ? (
+            <span className="chip text-rose-300">Unreachable</span>
+          ) : null}
+        </div>
+      </SectionCard>
+
+      <SectionCard
+        icon="sparkles"
+        title="API authentication"
+        description="Bearer token for user-scoped uploads and MIDI jobs. Obtain via POST /api/auth/token on your backend (dev) or your identity provider."
+      >
+        <Field label="Auth token (optional)">
+          <input
+            className="input font-mono text-xs"
+            type="password"
+            placeholder="user-id.signature"
+            value={settings.apiAuthToken}
+            onChange={(e) => update('apiAuthToken', e.target.value)}
+            autoComplete="off"
+          />
+        </Field>
+        <p className="text-xs text-[color:var(--text-2)]">
+          When set, uploads and conversions use authenticated <span className="font-mono">/api/midi/jobs</span> endpoints
+          with per-user file isolation.
+        </p>
+      </SectionCard>
+
       <SectionCard
         icon="speed"
         title="Playback"

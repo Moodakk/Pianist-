@@ -74,6 +74,8 @@ export function useLocalLibrary() {
       metronomeVolume: 70,
       keyboardRange: 'A0-C8',
       practiceDifficulty: 'Intermediate',
+      apiBaseUrl: '',
+      apiAuthToken: '',
     }),
   )
 

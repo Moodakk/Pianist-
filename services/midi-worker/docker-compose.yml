@@ -1,0 +1,35 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  midi-worker-api:
+    build: .
+    ports:
+      - "8100:8100"
+    environment:
+      MIDI_WORKER_REDIS_URL: redis://redis:6379/0
+      MIDI_WORKER_WORK_DIR: /data/work
+      MIDI_WORKER_ARTIFACT_DIR: /data/artifacts
+      MIDI_WORKER_WORKER_SECRET: dev-worker-secret
+    volumes:
+      - midi_worker_data:/data
+    depends_on:
+      - redis
+
+  midi-worker-celery:
+    build: .
+    command: celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=1
+    environment:
+      MIDI_WORKER_REDIS_URL: redis://redis:6379/0
+      MIDI_WORKER_WORK_DIR: /data/work
+      MIDI_WORKER_ARTIFACT_DIR: /data/artifacts
+      MIDI_WORKER_WORKER_SECRET: dev-worker-secret
+    volumes:
+      - midi_worker_data:/data
+    depends_on:
+      - redis
+
+volumes:
+  midi_worker_data:
