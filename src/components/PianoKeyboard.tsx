@@ -3,6 +3,10 @@ import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
 interface Props {
   activeNotes: number[]
+  hitNotes?: number[]
+  hitLeftHandNotes?: number[]
+  guideNotes?: number[]
+  guideLeftHandNotes?: number[]
   leftHandNotes?: number[]
   onPress?: (midi: number, on: boolean) => void
   min?: number
@@ -15,6 +19,10 @@ const DEFAULT_MAX = 96
 
 function PianoKeyboardImpl({
   activeNotes,
+  hitNotes = [],
+  hitLeftHandNotes = [],
+  guideNotes = [],
+  guideLeftHandNotes = [],
   leftHandNotes = [],
   onPress,
   min = DEFAULT_MIN,
@@ -41,9 +49,22 @@ function PianoKeyboardImpl({
 
   const whiteWidthPct = 100 / whiteKeys.length
 
-  const isLeftHand = (m: number) => leftHandNotes.includes(m)
-  const isActive = (m: number) =>
+  const isLeftHand = (m: number) =>
+    leftHandNotes.includes(m) ||
+    hitLeftHandNotes.includes(m) ||
+    guideLeftHandNotes.includes(m)
+  const isPressed = (m: number) =>
     activeNotes.includes(m) || leftHandNotes.includes(m) || mouseDown === m
+  const isHit = (m: number) =>
+    !isPressed(m) && (hitNotes.includes(m) || hitLeftHandNotes.includes(m))
+  const isGuide = (m: number) =>
+    !isPressed(m) && !isHit(m) && (guideNotes.includes(m) || guideLeftHandNotes.includes(m))
+  const keyClass = (m: number) => {
+    if (isPressed(m)) return isLeftHand(m) ? 'lh active' : 'active'
+    if (isHit(m)) return isLeftHand(m) ? 'lh hit' : 'hit'
+    if (isGuide(m)) return isLeftHand(m) ? 'lh guide' : 'guide'
+    return ''
+  }
 
   const press = (midi: number) => {
     setMouseDown(midi)
@@ -69,7 +90,7 @@ function PianoKeyboardImpl({
             }}
             onPointerUp={() => release(midi)}
             onPointerLeave={() => release(midi)}
-            className={`key-white ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
+            className={`key-white ${keyClass(midi)}`}
             aria-label={midiToName(midi)}
           >
             {showLabels ? (
@@ -95,7 +116,7 @@ function PianoKeyboardImpl({
               }}
               onPointerUp={() => release(midi)}
               onPointerLeave={() => release(midi)}
-              className={`key-black ${isActive(midi) ? (isLeftHand(midi) ? 'lh active' : 'active') : ''}`}
+              className={`key-black ${keyClass(midi)}`}
               style={{ left: `${left}%`, width: `${whiteWidthPct * 0.6}%` }}
               aria-label={midiToName(midi)}
             >
@@ -120,6 +141,10 @@ function arraysEqual(a: number[], b: number[]) {
 export const PianoKeyboard = memo(PianoKeyboardImpl, (prev, next) => {
   return (
     arraysEqual(prev.activeNotes, next.activeNotes) &&
+    arraysEqual(prev.hitNotes ?? [], next.hitNotes ?? []) &&
+    arraysEqual(prev.hitLeftHandNotes ?? [], next.hitLeftHandNotes ?? []) &&
+    arraysEqual(prev.guideNotes ?? [], next.guideNotes ?? []) &&
+    arraysEqual(prev.guideLeftHandNotes ?? [], next.guideLeftHandNotes ?? []) &&
     arraysEqual(prev.leftHandNotes ?? [], next.leftHandNotes ?? []) &&
     prev.onPress === next.onPress &&
     prev.min === next.min &&

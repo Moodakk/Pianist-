@@ -3,7 +3,7 @@
 // Override the base by setting VITE_AUDIO2MIDI_API.
 
 export type A2MMode = 'full' | 'melody' | 'bass' | 'stem' | 'piano'
-export type A2MStem = 'vocals' | 'bass' | 'other' | 'drums' | 'original'
+export type A2MStem = 'vocals' | 'bass' | 'other' | 'drums' | 'original' | 'minus'
 export type A2MQuantize = 'none' | '1/16' | '1/8' | '1/4'
 
 export interface A2MConvertRequest {

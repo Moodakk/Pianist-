@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 Mode = Literal["full", "melody", "bass", "stem", "piano"]
-StemName = Literal["vocals", "bass", "other", "drums", "original"]
+StemName = Literal["vocals", "bass", "other", "drums", "original", "minus"]
 Quantize = Literal["none", "1/16", "1/8", "1/4"]
 MidiJobState = Literal["queued", "running", "done", "error"]
 

@@ -1,9 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Icon } from '../components/Icon'
 import { useMidiParser } from '../hooks/useMidiParser'
 import type { TrackAssignment } from '../types/midi'
 import type { Song } from '../types/song'
+import { AUDIO_EXTENSIONS } from '../types/audioConvert'
+import { backingAudioStore } from '../utils/backingAudioStore'
 
 interface Props {
   onSave: (song: Song) => void
@@ -14,11 +16,14 @@ const assignments: TrackAssignment[] = ['right', 'left', 'both', 'ignore']
 export function ImportMidi({ onSave }: Props) {
   const { parseFile } = useMidiParser()
   const navigate = useNavigate()
+  const location = useLocation()
   const fileRef = useRef<HTMLInputElement>(null)
+  const backingRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [parsed, setParsed] = useState<Awaited<ReturnType<typeof parseFile>> | null>(null)
   const [trackAssignments, setTrackAssignments] = useState<Record<number, TrackAssignment>>({})
+  const [backingFile, setBackingFile] = useState<File | null>(null)
   const [anime, setAnime] = useState('Tokyo Ghoul')
   const [opening, setOpening] = useState('OP1')
   const [difficulty, setDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Intermediate')
@@ -47,16 +52,23 @@ export function ImportMidi({ onSave }: Props) {
     }
   }
 
+  useEffect(() => {
+    const state = location.state as { midiFile?: File; backingFile?: File } | null
+    if (state?.midiFile) void handleFile(state.midiFile)
+    if (state?.backingFile) setBackingFile(state.backingFile)
+  }, [location.state])
+
   const onDrop = async (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
     const file = event.dataTransfer.files?.[0]
     if (file) await handleFile(file)
   }
 
-  const saveSong = () => {
+  const saveSong = async () => {
     if (!parsed) return
+    const songId = `imported-${Date.now()}`
     const song: Song = {
-      id: `imported-${Date.now()}`,
+      id: songId,
       title: parsed.title,
       category: 'User Imported Songs',
       importedAt: Date.now(),
@@ -70,6 +82,13 @@ export function ImportMidi({ onSave }: Props) {
         key: key || undefined,
         sourceNote,
       },
+    }
+    if (backingFile) {
+      await backingAudioStore.put(songId, backingFile)
+      song.backingAudio = {
+        filename: backingFile.name,
+        mimeType: backingFile.type || 'audio/mpeg',
+      }
     }
     onSave(song)
     navigate('/practice')
@@ -170,9 +189,38 @@ export function ImportMidi({ onSave }: Props) {
             </div>
           </div>
 
+          <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4">
+            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-[color:var(--text-2)]">
+              Backing track (minus)
+            </h3>
+            <p className="mb-3 text-sm text-[color:var(--text-2)]">
+              Optional MP3/WAV to play in the background during Practice (original instrumental).
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" className="btn btn-ghost" onClick={() => backingRef.current?.click()}>
+                <Icon name="mic" size={14} /> {backingFile ? 'Change audio' : 'Attach minus'}
+              </button>
+              {backingFile ? (
+                <span className="chip violet">{backingFile.name}</span>
+              ) : (
+                <span className="text-xs text-[color:var(--text-2)]">No file selected</span>
+              )}
+            </div>
+            <input
+              ref={backingRef}
+              type="file"
+              accept={AUDIO_EXTENSIONS.join(',')}
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setBackingFile(file)
+              }}
+            />
+          </div>
+
           <div className="flex justify-end gap-2">
             <button className="btn btn-ghost" onClick={() => setParsed(null)}>Cancel</button>
-            <button className="btn btn-primary" onClick={saveSong}>
+            <button className="btn btn-primary" onClick={() => void saveSong()}>
               <Icon name="check" size={14} /> Save & Practice
             </button>
           </div>

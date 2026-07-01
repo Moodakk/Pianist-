@@ -11,6 +11,11 @@ export interface SongTag {
   sourceNote?: string
 }
 
+export interface SongBackingAudio {
+  filename: string
+  mimeType: string
+}
+
 export interface Song {
   id: string
   title: string
@@ -21,4 +26,6 @@ export interface Song {
   importedAt?: number
   midi?: ParsedMidiSong
   trackAssignments?: Record<number, TrackAssignment>
+  /** Instrumental / minus audio stored in IndexedDB under song.id */
+  backingAudio?: SongBackingAudio
 }

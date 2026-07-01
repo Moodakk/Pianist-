@@ -5,13 +5,21 @@ interface Props {
   mode: PracticeMode
   handMode: HandMode
   speed: number
+  simplified: boolean
   metronomeOn: boolean
   countIn: number
   running: boolean
   canResume: boolean
+  minusOn?: boolean
+  minusAvailable?: boolean
+  minusVolume?: number
+  onMinus?: (v: boolean) => void
+  onMinusVolume?: (v: number) => void
+  onAttachMinus?: () => void
   onMode: (v: PracticeMode) => void
   onHandMode: (v: HandMode) => void
   onSpeed: (v: number) => void
+  onSimplified: (v: boolean) => void
   onMetronome: (v: boolean) => void
   onCountIn: (v: number) => void
   onPlay: () => void
@@ -21,6 +29,7 @@ interface Props {
 
 const speeds = [0.25, 0.5, 0.75, 1]
 const modes: { id: PracticeMode; label: string }[] = [
+  { id: 'learn', label: 'Learn' },
   { id: 'watch', label: 'Watch' },
   { id: 'practice', label: 'Practice' },
   { id: 'rhythm', label: 'Rhythm' },
@@ -78,7 +87,52 @@ export function PracticeControls(props: Props) {
         ))}
       </ControlGroup>
 
-      <div className="ml-auto flex items-center gap-3">
+      {props.mode === 'learn' ? (
+        <button
+          className="flex items-center gap-2 text-xs text-[color:var(--text-1)] transition hover:text-white"
+          onClick={() => props.onSimplified(!props.simplified)}
+          title="Melody-only simplified arrangement"
+        >
+          <Icon name="sparkles" size={14} />
+          Simplified
+          <span className={`toggle ${props.simplified ? 'on' : ''}`} />
+        </button>
+      ) : null}
+
+      <div className="ml-auto flex flex-wrap items-center gap-3">
+        {props.minusAvailable ? (
+          <>
+            <button
+              className="flex items-center gap-2 text-xs text-[color:var(--text-1)] transition hover:text-white"
+              onClick={() => props.onMinus?.(!props.minusOn)}
+              title="Play instrumental minus in background"
+            >
+              <Icon name="mic" size={14} />
+              Minus
+              <span className={`toggle ${props.minusOn ? 'on' : ''}`} />
+            </button>
+            <label className="flex items-center gap-2 text-xs text-[color:var(--text-1)]">
+              Vol
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={Math.round((props.minusVolume ?? 0.75) * 100)}
+                onChange={(e) => props.onMinusVolume?.(Number(e.target.value) / 100)}
+                className="w-20 accent-violet-500"
+              />
+            </label>
+          </>
+        ) : (
+          <button
+            className="btn btn-ghost !px-3 !py-1 text-xs"
+            onClick={() => props.onAttachMinus?.()}
+            title="Attach MP3/WAV minus for this song"
+          >
+            <Icon name="mic" size={14} /> Add minus
+          </button>
+        )}
+
         <label className="flex items-center gap-2 text-xs text-[color:var(--text-1)]">
           Count-in
           <input

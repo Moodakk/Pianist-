@@ -47,7 +47,7 @@ export default function App() {
         ))}
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className="title-bar">
           <span className="dot red" />
           <span className="dot yellow" />
@@ -76,7 +76,7 @@ export default function App() {
           </div>
         )}
 
-        <main className={`min-w-0 flex-1 ${isPractice ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <main className={`min-h-0 min-w-0 flex-1 ${isPractice ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <Routes>
             <Route path="/" element={<Dashboard songs={library.songs} onPlay={(song) => { setPracticeSong(song) }} />} />
             <Route
@@ -102,7 +102,16 @@ export default function App() {
             />
             <Route
               path="/practice"
-              element={<Practice song={practiceSong} onSessionComplete={library.addSession} />}
+              element={
+                <Practice
+                  song={practiceSong}
+                  onSessionComplete={library.addSession}
+                  onUpdateSong={(song) => {
+                    library.upsertImportedSong(song)
+                    setPracticeSong(song)
+                  }}
+                />
+              }
             />
             <Route path="/progress" element={<Progress songs={library.songs} sessions={library.sessions} />} />
             <Route path="/settings" element={<Settings settings={library.settings} onChange={library.setSettings} onReset={library.resetAllData} />} />
