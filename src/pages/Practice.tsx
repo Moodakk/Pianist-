@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { LearnPrompt } from '../components/LearnPrompt'
 import { MidiDeviceSelector } from '../components/MidiDeviceSelector'
 import { PianoKeyboard } from '../components/PianoKeyboard'
 import { PianoRoll } from '../components/PianoRoll'
@@ -41,17 +42,28 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
   const engine = usePracticeEngine(notes, () => finishCbRef.current())
   const backing = useBackingTrack(song, {
     currentTime: engine.currentTime,
-    running: engine.running,
+    running: engine.running && !engine.waiting,
     speed: engine.speed,
     countdown: engine.countdown,
   })
   const scoring = useScoring(engine.filteredNotes)
 
-  const midiInput = useMidiInput((midi, on) => {
+  const currentTimeRef = useRef(engine.currentTime)
+  useEffect(() => { currentTimeRef.current = engine.currentTime })
+
+  const scoringRef = useRef(scoring)
+  useEffect(() => { scoringRef.current = scoring })
+
+  const registerHitRef = useRef(engine.registerHit)
+  useEffect(() => { registerHitRef.current = engine.registerHit })
+
+  const onMidiNote = useCallback((midi: number, on: boolean) => {
     if (!on) return
-    scoring.onNoteInput(midi, engine.currentTime)
-    engine.registerHit(midi)
-  })
+    scoringRef.current.onNoteInput(midi, currentTimeRef.current)
+    registerHitRef.current(midi)
+  }, [])
+
+  const midiInput = useMidiInput(onMidiNote)
 
   const leftHandActive = useMemo(
     () =>
@@ -62,6 +74,16 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
   )
 
   const { guideNotes, guideLeftHandNotes } = useMemo(() => {
+    if (engine.mode === 'learn' && engine.waiting) {
+      const rh = new Set<number>()
+      const lh = new Set<number>()
+      for (const n of engine.currentLearnStepNotes) {
+        if (n.track % 2 === 1) lh.add(n.midi)
+        else rh.add(n.midi)
+      }
+      return { guideNotes: [...rh], guideLeftHandNotes: [...lh] }
+    }
+
     const t = engine.currentTime
     const lead = 0.15
     const rh = new Set<number>()
@@ -73,17 +95,37 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
       else rh.add(n.midi)
     }
     return { guideNotes: [...rh], guideLeftHandNotes: [...lh] }
-  }, [engine.filteredNotes, engine.currentTime])
+  }, [
+    engine.mode,
+    engine.waiting,
+    engine.currentLearnStepNotes,
+    engine.filteredNotes,
+    engine.currentTime,
+  ])
 
-  const currentTimeRef = useRef(engine.currentTime)
-  useEffect(() => { currentTimeRef.current = engine.currentTime })
+  const currentStepIndices = useMemo(() => {
+    if (engine.mode !== 'learn') return null
+    return new Set(engine.learnSteps[engine.learnStepIndex] ?? [])
+  }, [engine.mode, engine.learnSteps, engine.learnStepIndex])
 
-  const onKeyboardPress = useCallback(
-    (midi: number, on: boolean) => {
-      if (on) scoring.onNoteInput(midi, currentTimeRef.current)
-    },
-    [scoring],
-  )
+  const { hitNotes, hitLeftHandNotes } = useMemo(() => {
+    const t = engine.currentTime
+    const rh = new Set<number>()
+    const lh = new Set<number>()
+    for (const idx of scoring.hitSet) {
+      const n = engine.filteredNotes[idx]
+      if (!n || t >= n.start + n.duration) continue
+      if (n.track % 2 === 1) lh.add(n.midi)
+      else rh.add(n.midi)
+    }
+    return { hitNotes: [...rh], hitLeftHandNotes: [...lh] }
+  }, [scoring.hitSet, engine.filteredNotes, engine.currentTime])
+
+  const onKeyboardPress = useCallback((midi: number, on: boolean) => {
+    if (!on) return
+    scoringRef.current.onNoteInput(midi, currentTimeRef.current)
+    registerHitRef.current(midi)
+  }, [])
 
   const attachMinus = async (file: File) => {
     if (!song || !onUpdateSong) return
@@ -116,6 +158,7 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
     setStartedAt(Date.now())
     setHasStarted(true)
     finishedRef.current = false
+    engine.resetLearnProgress()
     void engine.start()
   }
 
@@ -177,8 +220,11 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
             <span className="chip violet">{song.tags.anime}</span>
             <span className="chip cyan">{song.tags.difficulty}</span>
             {song.tags.bpm ? <span className="chip">{Math.round(song.tags.bpm)} BPM</span> : null}
+            {engine.mode === 'learn' ? <span className="chip violet">Learn</span> : null}
+            {engine.mode === 'learn' && engine.simplified ? <span className="chip">Easy</span> : null}
             {backing.hasBacking && backing.enabled ? <span className="chip">♫ Minus</span> : null}
-            {engine.running ? <span className="chip emerald">● Playing</span> : null}
+            {engine.waiting ? <span className="chip pink">Your turn</span> : null}
+            {engine.running && !engine.waiting ? <span className="chip emerald">● Playing</span> : null}
           </div>
         </div>
         <div className="ml-auto flex items-center gap-4">
@@ -213,6 +259,7 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
           mode={engine.mode}
           handMode={engine.handMode}
           speed={engine.speed}
+          simplified={engine.simplified}
           metronomeOn={engine.metronomeOn}
           countIn={engine.countIn}
           running={engine.running}
@@ -226,6 +273,7 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
           onMode={engine.setMode}
           onHandMode={engine.setHandMode}
           onSpeed={engine.setSpeed}
+          onSimplified={engine.setSimplified}
           onMetronome={engine.setMetronomeOn}
           onCountIn={engine.setCountIn}
           onPlay={handlePlay}
@@ -253,7 +301,18 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
             notes={engine.filteredNotes}
             currentTime={engine.currentTime}
             hitSet={scoring.hitSet}
+            visibleIndices={engine.learnVisibleIndices}
+            currentStepIndices={currentStepIndices}
           />
+          {engine.mode === 'learn' && hasStarted ? (
+            <LearnPrompt
+              stepNumber={engine.learnStepIndex}
+              totalSteps={engine.learnSteps.length}
+              notes={engine.currentLearnStepNotes}
+              waiting={engine.waiting}
+              simplified={engine.simplified}
+            />
+          ) : null}
           {engine.countdown !== null ? (
             <div className="countdown-overlay">
               <div className="countdown-number">{engine.countdown}</div>
@@ -262,8 +321,12 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
           {!engine.running && engine.countdown === null && engine.currentTime === 0 && !hasStarted ? (
             <div className="play-prompt">
               <div className="play-prompt-card">
-                <Icon name="play" size={42} className="text-violet-200" />
-                <p className="mt-3 text-sm text-[color:var(--text-1)]">Press Play to start</p>
+                <Icon name="sparkles" size={42} className="text-violet-200" />
+                <p className="mt-3 text-sm font-medium text-[color:var(--text-0)]">Learn mode</p>
+                <p className="mt-1 text-sm text-[color:var(--text-1)]">
+                  Notes appear step by step. Play each group on the highlighted keys.
+                </p>
+                <p className="mt-2 text-xs text-[color:var(--text-2)]">Press Play to start</p>
               </div>
             </div>
           ) : null}
@@ -272,6 +335,8 @@ export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
         <div className="practice-keyboard -mx-6">
           <PianoKeyboard
             activeNotes={midiInput.activeNotes}
+            hitNotes={hitNotes}
+            hitLeftHandNotes={hitLeftHandNotes}
             guideNotes={guideNotes}
             guideLeftHandNotes={guideLeftHandNotes}
             leftHandNotes={leftHandActive}

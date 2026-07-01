@@ -3,6 +3,8 @@ import { isBlackKey, midiToName } from '../utils/midiHelpers'
 
 interface Props {
   activeNotes: number[]
+  hitNotes?: number[]
+  hitLeftHandNotes?: number[]
   guideNotes?: number[]
   guideLeftHandNotes?: number[]
   leftHandNotes?: number[]
@@ -17,6 +19,8 @@ const DEFAULT_MAX = 96
 
 function PianoKeyboardImpl({
   activeNotes,
+  hitNotes = [],
+  hitLeftHandNotes = [],
   guideNotes = [],
   guideLeftHandNotes = [],
   leftHandNotes = [],
@@ -45,13 +49,19 @@ function PianoKeyboardImpl({
 
   const whiteWidthPct = 100 / whiteKeys.length
 
-  const isLeftHand = (m: number) => leftHandNotes.includes(m) || guideLeftHandNotes.includes(m)
-  const isActive = (m: number) =>
+  const isLeftHand = (m: number) =>
+    leftHandNotes.includes(m) ||
+    hitLeftHandNotes.includes(m) ||
+    guideLeftHandNotes.includes(m)
+  const isPressed = (m: number) =>
     activeNotes.includes(m) || leftHandNotes.includes(m) || mouseDown === m
+  const isHit = (m: number) =>
+    !isPressed(m) && (hitNotes.includes(m) || hitLeftHandNotes.includes(m))
   const isGuide = (m: number) =>
-    !isActive(m) && (guideNotes.includes(m) || guideLeftHandNotes.includes(m))
+    !isPressed(m) && !isHit(m) && (guideNotes.includes(m) || guideLeftHandNotes.includes(m))
   const keyClass = (m: number) => {
-    if (isActive(m)) return isLeftHand(m) ? 'lh active' : 'active'
+    if (isPressed(m)) return isLeftHand(m) ? 'lh active' : 'active'
+    if (isHit(m)) return isLeftHand(m) ? 'lh hit' : 'hit'
     if (isGuide(m)) return isLeftHand(m) ? 'lh guide' : 'guide'
     return ''
   }
@@ -131,6 +141,8 @@ function arraysEqual(a: number[], b: number[]) {
 export const PianoKeyboard = memo(PianoKeyboardImpl, (prev, next) => {
   return (
     arraysEqual(prev.activeNotes, next.activeNotes) &&
+    arraysEqual(prev.hitNotes ?? [], next.hitNotes ?? []) &&
+    arraysEqual(prev.hitLeftHandNotes ?? [], next.hitLeftHandNotes ?? []) &&
     arraysEqual(prev.guideNotes ?? [], next.guideNotes ?? []) &&
     arraysEqual(prev.guideLeftHandNotes ?? [], next.guideLeftHandNotes ?? []) &&
     arraysEqual(prev.leftHandNotes ?? [], next.leftHandNotes ?? []) &&

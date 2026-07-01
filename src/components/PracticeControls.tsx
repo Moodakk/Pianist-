@@ -5,6 +5,7 @@ interface Props {
   mode: PracticeMode
   handMode: HandMode
   speed: number
+  simplified: boolean
   metronomeOn: boolean
   countIn: number
   running: boolean
@@ -18,6 +19,7 @@ interface Props {
   onMode: (v: PracticeMode) => void
   onHandMode: (v: HandMode) => void
   onSpeed: (v: number) => void
+  onSimplified: (v: boolean) => void
   onMetronome: (v: boolean) => void
   onCountIn: (v: number) => void
   onPlay: () => void
@@ -27,6 +29,7 @@ interface Props {
 
 const speeds = [0.25, 0.5, 0.75, 1]
 const modes: { id: PracticeMode; label: string }[] = [
+  { id: 'learn', label: 'Learn' },
   { id: 'watch', label: 'Watch' },
   { id: 'practice', label: 'Practice' },
   { id: 'rhythm', label: 'Rhythm' },
@@ -83,6 +86,18 @@ export function PracticeControls(props: Props) {
           </SegBtn>
         ))}
       </ControlGroup>
+
+      {props.mode === 'learn' ? (
+        <button
+          className="flex items-center gap-2 text-xs text-[color:var(--text-1)] transition hover:text-white"
+          onClick={() => props.onSimplified(!props.simplified)}
+          title="Melody-only simplified arrangement"
+        >
+          <Icon name="sparkles" size={14} />
+          Simplified
+          <span className={`toggle ${props.simplified ? 'on' : ''}`} />
+        </button>
+      ) : null}
 
       <div className="ml-auto flex flex-wrap items-center gap-3">
         {props.minusAvailable ? (

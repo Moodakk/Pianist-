@@ -266,6 +266,14 @@ button {
   background: linear-gradient(180deg, #b5c8ff 0%, #7c5cff 100%);
   box-shadow: inset 0 -8px 12px rgba(124,92,255,0.55);
 }
+.piano .key-white.hit {
+  background: linear-gradient(180deg, #a7f3d0 0%, #10b981 100%);
+  box-shadow: inset 0 -8px 12px rgba(16,185,129,0.55);
+}
+.piano .key-white.lh.hit {
+  background: linear-gradient(180deg, #a7f3d0 0%, #10b981 100%);
+  box-shadow: inset 0 -8px 12px rgba(16,185,129,0.55);
+}
 .piano .key-white.lh.active {
   background: linear-gradient(180deg, #b5f0ff 0%, #38bdf8 100%);
   box-shadow: inset 0 -8px 12px rgba(56,189,248,0.55);
@@ -323,6 +331,14 @@ button {
 .piano .key-black.active {
   background: linear-gradient(180deg, #5e3eff, #3a1eff);
   box-shadow: inset 0 -4px 8px rgba(255,255,255,0.18), 0 4px 6px rgba(124,92,255,0.6);
+}
+.piano .key-black.hit {
+  background: linear-gradient(180deg, #34d399, #047857);
+  box-shadow: inset 0 -4px 8px rgba(255,255,255,0.18), 0 4px 6px rgba(16,185,129,0.6);
+}
+.piano .key-black.lh.hit {
+  background: linear-gradient(180deg, #34d399, #047857);
+  box-shadow: inset 0 -4px 8px rgba(255,255,255,0.18), 0 4px 6px rgba(16,185,129,0.6);
 }
 .piano .key-black.lh.active {
   background: linear-gradient(180deg, #38bdf8, #0284c7);
@@ -387,6 +403,23 @@ button {
 .roll .roll-note.missed {
   background: linear-gradient(180deg, #fda4af, #f43f5e);
   box-shadow: 0 0 12px rgba(244,63,94,0.5);
+}
+.roll .roll-note.current {
+  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  box-shadow: 0 0 20px rgba(245,158,11,0.65), inset 0 1px 0 rgba(255,255,255,0.45);
+  animation: learn-pulse 0.9s ease-in-out infinite;
+}
+.roll .roll-note.current.lh {
+  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  box-shadow: 0 0 20px rgba(245,158,11,0.65), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+.roll .roll-note.hidden-note {
+  opacity: 0.08;
+  pointer-events: none;
+}
+@keyframes learn-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
 }
 .roll .roll-note.black {
   background: linear-gradient(180deg, #7c5cff, #4628d6);
@@ -589,6 +622,24 @@ button {
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+}
+
+/* Learn mode prompt */
+.learn-prompt {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 18;
+  pointer-events: none;
+  max-width: min(320px, 90%);
+}
+.learn-prompt-card {
+  padding: 16px 20px;
+  border-radius: 16px;
+  background: rgba(20,22,38,0.88);
+  border: 1px solid rgba(245,158,11,0.35);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.45);
 }
 
 /* Pop animation for modals */

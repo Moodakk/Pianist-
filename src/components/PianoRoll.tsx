@@ -7,6 +7,8 @@ interface Props {
   currentTime: number
   hitSet?: Set<number>
   missedSet?: Set<number>
+  visibleIndices?: Set<number> | null
+  currentStepIndices?: Set<number> | null
   min?: number
   max?: number
   height?: number
@@ -35,6 +37,8 @@ export function PianoRoll({
   currentTime,
   hitSet,
   missedSet,
+  visibleIndices = null,
+  currentStepIndices = null,
   min = DEFAULT_MIN,
   max = DEFAULT_MAX,
   height: heightProp,
@@ -137,6 +141,8 @@ export function PianoRoll({
         positioned={positioned}
         hitSet={hitSet}
         missedSet={missedSet}
+        visibleIndices={visibleIndices}
+        currentStepIndices={currentStepIndices}
       />
 
       {notes.length === 0 ? (
@@ -156,17 +162,28 @@ interface LayerProps {
   positioned: PositionedNote[]
   hitSet?: Set<number>
   missedSet?: Set<number>
+  visibleIndices?: Set<number> | null
+  currentStepIndices?: Set<number> | null
 }
 
-const NotesLayer = memo(function NotesLayer({ innerRef, positioned, hitSet, missedSet }: LayerProps) {
+const NotesLayer = memo(function NotesLayer({
+  innerRef,
+  positioned,
+  hitSet,
+  missedSet,
+  visibleIndices,
+  currentStepIndices,
+}: LayerProps) {
   return (
     <div ref={innerRef} className="roll-layer">
       {positioned.map((n) => {
         const isHit = hitSet?.has(n.index)
         const isMissed = missedSet?.has(n.index)
+        const hidden = visibleIndices && !visibleIndices.has(n.index)
+        const isCurrent = currentStepIndices?.has(n.index)
         const cls = `roll-note ${n.isBlack ? 'black' : 'white'} ${
-          isHit ? 'hit' : isMissed ? 'missed' : n.isLeftHand ? 'lh' : ''
-        }`
+          isHit ? 'hit' : isMissed ? 'missed' : isCurrent ? 'current' : n.isLeftHand ? 'lh' : ''
+        }${hidden ? ' hidden-note' : ''}`
         const showLabel = n.h >= 22
         const label = n.h >= 60 ? n.name : n.shortName
         return (
