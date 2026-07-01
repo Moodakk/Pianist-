@@ -1,5 +1,5 @@
 export type ConvertMode = 'full' | 'melody' | 'bass' | 'stem' | 'piano'
-export type StemName = 'vocals' | 'bass' | 'other' | 'drums' | 'original'
+export type StemName = 'vocals' | 'bass' | 'other' | 'drums' | 'original' | 'minus'
 export type Quantize = 'none' | '1/16' | '1/8' | '1/4'
 export type JobState = 'queued' | 'running' | 'done' | 'error'
 

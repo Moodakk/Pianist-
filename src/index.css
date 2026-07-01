@@ -18,6 +18,8 @@
 html, body, #root {
   margin: 0;
   min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   background: var(--bg-0);
   color: var(--text-0);
   font-family: 'Inter', system-ui, sans-serif;
@@ -27,7 +29,8 @@ html, body, #root {
 
 #root {
   display: flex;
-  min-height: 100vh;
+  min-height: 100%;
+  height: 100%;
 }
 
 * {
@@ -63,7 +66,8 @@ button {
     radial-gradient(900px 500px at 110% 10%, rgba(56, 189, 248, 0.16), transparent 60%),
     radial-gradient(800px 500px at 50% 110%, rgba(244, 114, 182, 0.14), transparent 60%),
     var(--bg-0);
-  min-height: 100vh;
+  min-height: 100%;
+  height: 100%;
   width: 100%;
   display: flex;
 }
@@ -266,6 +270,14 @@ button {
   background: linear-gradient(180deg, #b5f0ff 0%, #38bdf8 100%);
   box-shadow: inset 0 -8px 12px rgba(56,189,248,0.55);
 }
+.piano .key-white.guide {
+  background: linear-gradient(180deg, #ece8ff 0%, #c4b5fd 100%);
+  box-shadow: inset 0 -6px 10px rgba(124,92,255,0.35);
+}
+.piano .key-white.lh.guide {
+  background: linear-gradient(180deg, #dff7ff 0%, #7dd3fc 100%);
+  box-shadow: inset 0 -6px 10px rgba(56,189,248,0.35);
+}
 .piano .key-label {
   position: absolute; bottom: 8px; left: 0; right: 0;
   text-align: center; font-size: 10px; color: rgba(0,0,0,0.45);
@@ -315,6 +327,26 @@ button {
 .piano .key-black.lh.active {
   background: linear-gradient(180deg, #38bdf8, #0284c7);
   box-shadow: inset 0 -4px 8px rgba(255,255,255,0.18), 0 4px 6px rgba(56,189,248,0.6);
+}
+.piano .key-black.guide {
+  background: linear-gradient(180deg, #6d4aff, #4c2fd6);
+  box-shadow: inset 0 -4px 8px rgba(255,255,255,0.12), 0 4px 6px rgba(124,92,255,0.45);
+}
+.piano .key-black.lh.guide {
+  background: linear-gradient(180deg, #38bdf8, #0369a1);
+  box-shadow: inset 0 -4px 8px rgba(255,255,255,0.12), 0 4px 6px rgba(56,189,248,0.45);
+}
+
+/* Practice stage: roll + keyboard always visible */
+.practice-stage {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+.practice-stage .practice-keyboard {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 /* Roll */

@@ -25,7 +25,7 @@ from ..models.schemas import (
 )
 from ..services.audio import duration_seconds, estimate_tempo, to_wav
 from ..services.basic_pitch_service import transcribe
-from ..services.demucs_service import separate
+from ..services.demucs_service import MINUS_STEMS, mix_stems, separate
 from ..services.midi_job_service import create_midi_artifact, get_midi_job, update_midi_job
 from ..services.midi_postprocess import CleanSettings, clean_midi, summarize_midi
 from ..storage_paths import find_upload, job_dir
@@ -112,9 +112,15 @@ def run_pipeline(job_id: JobKey, req: ConvertRequest) -> None:
             stems_dir = work_dir / "stems"
             stems = separate(wav_path, stems_dir)
             picked = req.selected_stem
-            if picked == "original" or picked not in stems:
+            if picked == "minus":
+                minus_path = work_dir / "minus.wav"
+                target_audio = mix_stems(stems, MINUS_STEMS, minus_path)
+                picked = "minus"
+            elif picked == "original" or picked not in stems:
                 picked = "other" if "other" in stems else next(iter(stems))
-            target_audio = stems[picked]
+                target_audio = stems[picked]
+            else:
+                target_audio = stems[picked]
             _update_job_state(job_id, step=f"demucs done, using stem '{picked}'", progress=0.5)
 
         _update_job_state(job_id, step="running Basic Pitch", progress=0.6)

@@ -6,15 +6,19 @@ import { PianoRoll } from '../components/PianoRoll'
 import { PracticeControls } from '../components/PracticeControls'
 import { ScoreSummary } from '../components/ScoreSummary'
 import { Icon } from '../components/Icon'
+import { useBackingTrack } from '../hooks/useBackingTrack'
 import { useMidiInput } from '../hooks/useMidiInput'
 import { usePracticeEngine } from '../hooks/usePracticeEngine'
 import { useScoring } from '../hooks/useScoring'
 import type { PracticeSession } from '../types/scoring'
 import type { Song } from '../types/song'
+import { AUDIO_EXTENSIONS } from '../types/audioConvert'
+import { backingAudioStore } from '../utils/backingAudioStore'
 
 interface Props {
   song: Song | null
   onSessionComplete: (payload: PracticeSession) => void
+  onUpdateSong?: (song: Song) => void
 }
 
 function formatTime(s: number) {
@@ -24,8 +28,9 @@ function formatTime(s: number) {
   return `${m}:${sec.toString().padStart(2, '0')}`
 }
 
-export function Practice({ song, onSessionComplete }: Props) {
+export function Practice({ song, onSessionComplete, onUpdateSong }: Props) {
   const navigate = useNavigate()
+  const attachMinusRef = useRef<HTMLInputElement>(null)
   const notes = useMemo(() => song?.midi?.tracks.flatMap((track) => track.notes) ?? [], [song])
   const [startedAt, setStartedAt] = useState<number | null>(null)
   const [showSummary, setShowSummary] = useState(false)
@@ -34,6 +39,12 @@ export function Practice({ song, onSessionComplete }: Props) {
   const finishedRef = useRef(false)
   const finishCbRef = useRef<() => void>(() => {})
   const engine = usePracticeEngine(notes, () => finishCbRef.current())
+  const backing = useBackingTrack(song, {
+    currentTime: engine.currentTime,
+    running: engine.running,
+    speed: engine.speed,
+    countdown: engine.countdown,
+  })
   const scoring = useScoring(engine.filteredNotes)
 
   const midiInput = useMidiInput((midi, on) => {
@@ -50,6 +61,20 @@ export function Practice({ song, onSessionComplete }: Props) {
     [midiInput.activeNotes, engine.filteredNotes],
   )
 
+  const { guideNotes, guideLeftHandNotes } = useMemo(() => {
+    const t = engine.currentTime
+    const lead = 0.15
+    const rh = new Set<number>()
+    const lh = new Set<number>()
+    for (const n of engine.filteredNotes) {
+      const atHit = n.start <= t + lead && n.start + n.duration > t
+      if (!atHit) continue
+      if (n.track % 2 === 1) lh.add(n.midi)
+      else rh.add(n.midi)
+    }
+    return { guideNotes: [...rh], guideLeftHandNotes: [...lh] }
+  }, [engine.filteredNotes, engine.currentTime])
+
   const currentTimeRef = useRef(engine.currentTime)
   useEffect(() => { currentTimeRef.current = engine.currentTime })
 
@@ -59,6 +84,18 @@ export function Practice({ song, onSessionComplete }: Props) {
     },
     [scoring],
   )
+
+  const attachMinus = async (file: File) => {
+    if (!song || !onUpdateSong) return
+    await backingAudioStore.put(song.id, file)
+    onUpdateSong({
+      ...song,
+      backingAudio: {
+        filename: file.name,
+        mimeType: file.type || 'audio/mpeg',
+      },
+    })
+  }
 
   const handlePlay = () => {
     if (!hasStarted) {
@@ -129,8 +166,8 @@ export function Practice({ song, onSessionComplete }: Props) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="practice-header">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="practice-header shrink-0">
         <button className="btn btn-ghost !py-1.5 !px-3 text-xs" onClick={() => navigate('/library')}>
           <Icon name="chevron-right" size={12} className="rotate-180" /> Library
         </button>
@@ -140,6 +177,7 @@ export function Practice({ song, onSessionComplete }: Props) {
             <span className="chip violet">{song.tags.anime}</span>
             <span className="chip cyan">{song.tags.difficulty}</span>
             {song.tags.bpm ? <span className="chip">{Math.round(song.tags.bpm)} BPM</span> : null}
+            {backing.hasBacking && backing.enabled ? <span className="chip">♫ Minus</span> : null}
             {engine.running ? <span className="chip emerald">● Playing</span> : null}
           </div>
         </div>
@@ -159,11 +197,11 @@ export function Practice({ song, onSessionComplete }: Props) {
         </div>
       </div>
 
-      <div className="progress-bar">
+      <div className="progress-bar shrink-0">
         <div className="progress-fill" style={{ width: `${progress * 100}%` }} />
       </div>
 
-      <div className="space-y-3 px-6 pt-4">
+      <div className="shrink-0 space-y-3 px-6 pt-4">
         <MidiDeviceSelector
           devices={midiInput.devices}
           selectedDeviceId={midiInput.selectedDeviceId}
@@ -179,6 +217,12 @@ export function Practice({ song, onSessionComplete }: Props) {
           countIn={engine.countIn}
           running={engine.running}
           canResume={hasStarted && !engine.running && engine.currentTime > 0}
+          minusOn={backing.enabled}
+          minusAvailable={backing.hasBacking}
+          minusVolume={backing.volume}
+          onMinus={backing.setEnabled}
+          onMinusVolume={backing.setVolume}
+          onAttachMinus={() => attachMinusRef.current?.click()}
           onMode={engine.setMode}
           onHandMode={engine.setHandMode}
           onSpeed={engine.setSpeed}
@@ -188,34 +232,53 @@ export function Practice({ song, onSessionComplete }: Props) {
           onPause={engine.pause}
           onRestart={handleRestart}
         />
-      </div>
-
-      <div className="relative mt-4 flex-1 min-h-0 px-6">
-        <PianoRoll
-          notes={engine.filteredNotes}
-          currentTime={engine.currentTime}
-          hitSet={scoring.hitSet}
+        <input
+          ref={attachMinusRef}
+          type="file"
+          accept={AUDIO_EXTENSIONS.join(',')}
+          hidden
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+            if (file) void attachMinus(file)
+          }}
         />
-        {engine.countdown !== null ? (
-          <div className="countdown-overlay">
-            <div className="countdown-number">{engine.countdown}</div>
-          </div>
-        ) : null}
-        {!engine.running && engine.countdown === null && engine.currentTime === 0 && !hasStarted ? (
-          <div className="play-prompt">
-            <div className="play-prompt-card">
-              <Icon name="play" size={42} className="text-violet-200" />
-              <p className="mt-3 text-sm text-[color:var(--text-1)]">Press Play to start</p>
-            </div>
-          </div>
+        {backing.loadError ? (
+          <p className="text-xs text-amber-300">{backing.loadError}</p>
         ) : null}
       </div>
 
-      <PianoKeyboard
-        activeNotes={midiInput.activeNotes}
-        leftHandNotes={leftHandActive}
-        onPress={onKeyboardPress}
-      />
+      <div className="practice-stage mt-2 px-6 pb-3">
+        <div className="relative min-h-0 flex-1">
+          <PianoRoll
+            notes={engine.filteredNotes}
+            currentTime={engine.currentTime}
+            hitSet={scoring.hitSet}
+          />
+          {engine.countdown !== null ? (
+            <div className="countdown-overlay">
+              <div className="countdown-number">{engine.countdown}</div>
+            </div>
+          ) : null}
+          {!engine.running && engine.countdown === null && engine.currentTime === 0 && !hasStarted ? (
+            <div className="play-prompt">
+              <div className="play-prompt-card">
+                <Icon name="play" size={42} className="text-violet-200" />
+                <p className="mt-3 text-sm text-[color:var(--text-1)]">Press Play to start</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="practice-keyboard -mx-6">
+          <PianoKeyboard
+            activeNotes={midiInput.activeNotes}
+            guideNotes={guideNotes}
+            guideLeftHandNotes={guideLeftHandNotes}
+            leftHandNotes={leftHandActive}
+            onPress={onKeyboardPress}
+          />
+        </div>
+      </div>
 
       {showSummary ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-6 backdrop-blur" onClick={() => setShowSummary(false)}>

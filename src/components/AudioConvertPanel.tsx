@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getApiBaseUrl } from '../config/api'
 import { useAudioConvert } from '../hooks/useAudioConvert'
 import { checkApiHealth } from '../services/audioConvertApi'
@@ -24,6 +24,7 @@ export function AudioConvertPanel({
   onMidiFile,
   showImportLink = !onMidiFile,
 }: Props) {
+  const navigate = useNavigate()
   const fileRef = useRef<HTMLInputElement>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [mode, setMode] = useState<ConvertMode>(DEFAULT_CONVERT_OPTIONS.mode)
@@ -181,6 +182,7 @@ export function AudioConvertPanel({
               disabled={busy}
               onChange={(e) => setSelectedStem(e.target.value as StemName)}
             >
+              <option value="minus">Minus (instrumental, no vocals)</option>
               <option value="original">Auto (other)</option>
               <option value="vocals">Vocals</option>
               <option value="bass">Bass</option>
@@ -240,7 +242,18 @@ export function AudioConvertPanel({
             <button type="button" className="btn btn-primary ml-auto" onClick={downloadResult}>
               <Icon name="upload" size={14} /> Download MIDI
             </button>
-            {showImportLink ? (
+            {showImportLink && selectedFile ? (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  navigate('/import', { state: { midiFile: resultFile, backingFile: selectedFile } })
+                }}
+              >
+                Import with minus <Icon name="chevron-right" size={14} />
+              </button>
+            ) : null}
+            {showImportLink && !selectedFile ? (
               <Link to="/import" className="btn btn-ghost">
                 Import to library <Icon name="chevron-right" size={14} />
               </Link>

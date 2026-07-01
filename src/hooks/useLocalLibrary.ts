@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Song } from '../types/song'
 import type { PracticeSession } from '../types/scoring'
+import { backingAudioStore } from '../utils/backingAudioStore'
 import { storage } from '../utils/storage'
 
 const SONGS_KEY = 'anime-piano-trainer:songs'
@@ -115,6 +116,7 @@ export function useLocalLibrary() {
     storage.remove(SONGS_KEY)
     storage.remove(SESSIONS_KEY)
     storage.remove(SETTINGS_KEY)
+    void backingAudioStore.clear()
     setSongs(placeholders)
     setSessions([])
   }
