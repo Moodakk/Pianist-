@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import shutil
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Union
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
 from ..config import JOBS_DIR, OUTPUT_DIR, logger
@@ -30,6 +31,9 @@ from ..services.midi_postprocess import CleanSettings, clean_midi, summarize_mid
 from ..storage_paths import find_upload, job_dir
 
 router = APIRouter(prefix="/api", tags=["convert"])
+
+# Basic Pitch / Demucs are CPU-heavy; run off the asyncio event loop so /api/health stays responsive.
+_pipeline_executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="audio2midi-pipeline")
 
 JobKey = Union[str, uuid.UUID]
 
@@ -162,15 +166,20 @@ def _json(payload) -> str:
     return json.dumps(payload, indent=2, default=str)
 
 
+def schedule_pipeline(job_id: JobKey, req: ConvertRequest) -> None:
+    """Queue a conversion job on a background thread."""
+    _pipeline_executor.submit(run_pipeline, job_id, req)
+
+
 @router.post("/convert", response_model=ConvertResponse)
-def convert(req: ConvertRequest, background: BackgroundTasks) -> ConvertResponse:
+def convert(req: ConvertRequest) -> ConvertResponse:
     try:
         _find_upload(req.file_id)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
     job = create_job(req.file_id, req.model_dump())
-    background.add_task(run_pipeline, job["job_id"], req)
+    schedule_pipeline(job["job_id"], req)
     return ConvertResponse(job_id=job["job_id"])
 
 

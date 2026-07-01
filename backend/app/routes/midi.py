@@ -6,7 +6,7 @@ import hmac
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -28,7 +28,7 @@ from ..services.midi_job_service import (
 )
 from ..services.worker_dispatch import build_callback_url, dispatch_midi_job
 from ..storage_paths import find_upload
-from .convert import _find_upload, run_pipeline
+from .convert import _find_upload, schedule_pipeline
 
 router = APIRouter(prefix="/api/midi", tags=["midi"])
 
@@ -59,7 +59,6 @@ def _require_owned_job(db: Session, job_id: uuid.UUID, user_id: str):
 @router.post("/jobs", response_model=MidiJobCreateResponse, status_code=status.HTTP_201_CREATED)
 def create_job(
     req: MidiJobCreateRequest,
-    background: BackgroundTasks,
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ) -> MidiJobCreateResponse:
@@ -70,7 +69,7 @@ def create_job(
 
     job = create_midi_job(db, user_id, req.file_id, req.model_dump())
     if USE_BACKGROUND_TASKS:
-        background.add_task(run_pipeline, job.id, req)
+        schedule_pipeline(job.id, req)
     else:
         dispatch_midi_job(
             job.id,
