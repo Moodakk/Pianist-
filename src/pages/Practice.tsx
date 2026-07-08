@@ -5,6 +5,7 @@ import { PianoKeyboard } from '../components/PianoKeyboard'
 import { PianoRoll } from '../components/PianoRoll'
 import { PracticeControls } from '../components/PracticeControls'
 import { ScoreSummary } from '../components/ScoreSummary'
+import { VideoPanel } from '../components/VideoPanel'
 import { Icon } from '../components/Icon'
 import { useMidiInput } from '../hooks/useMidiInput'
 import { usePracticeEngine } from '../hooks/usePracticeEngine'
@@ -130,6 +131,7 @@ export function Practice({ song, onSessionComplete }: Props) {
 
   return (
     <div className="flex h-full flex-col">
+      <VideoPanel />
       <div className="practice-header">
         <button className="btn btn-ghost !py-1.5 !px-3 text-xs" onClick={() => navigate('/library')}>
           <Icon name="chevron-right" size={12} className="rotate-180" /> Library
